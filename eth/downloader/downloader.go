@@ -401,6 +401,7 @@ func (d *Downloader) synchronise(id string, hash common.Hash, td *big.Int, mode 
 // syncWithPeer starts a block synchronization based on the hash chain from the
 // specified peer and head hash.
 func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.Int) (err error) {
+	fmt.Println("syncWithPeer")
 	d.mux.Post(StartEvent{})
 	defer func() {
 		// reset on error
@@ -1317,6 +1318,7 @@ func (d *Downloader) processHeaders(origin uint64, pivot uint64, td *big.Int) er
 
 // processFullSyncContent takes fetch results from the queue and imports them into the chain.
 func (d *Downloader) processFullSyncContent() error {
+	fmt.Println("processFullSyncContent")
 	for {
 		results := d.queue.Results(true)
 		if len(results) == 0 {
@@ -1332,6 +1334,7 @@ func (d *Downloader) processFullSyncContent() error {
 }
 
 func (d *Downloader) importBlockResults(results []*fetchResult) error {
+	fmt.Println("importBlockResults")
 	// Check for any early termination requests
 	if len(results) == 0 {
 		return nil
