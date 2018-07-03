@@ -27,6 +27,7 @@ import (
 	"github.com/GenaroNetwork/Genaro-Core/crypto"
 	"github.com/GenaroNetwork/Genaro-Core/params"
 	"github.com/GenaroNetwork/Genaro-Core/common/hexutil"
+	"encoding/hex"
 )
 
 var (
@@ -499,8 +500,8 @@ func opDataVerisonRead(pc *uint64, evm *EVM, contract *Contract, memory *Memory,
 	for i,v :=range byteArr{
 		fileIdArr[i] = v
 	}
-	//txLog,err = evm.StateDB.TxLogByDataVersionRead(common.BigToAddress(address),fileIdArr,strconv.FormatInt(dataVersion.Int64(),10))
-	txLog,err = evm.StateDB.TxLogByDataVersionRead(common.BigToAddress(address),fileIdArr,dataVersion.String())
+	//txLog,err = evm.StateDB.TxLogByDataVersionRead(common.BigToAddress(address),fileIdArr,strconv.FormatInt(dataVersion.Int64(),10)) //is not dataVersion.String()
+	txLog,err = evm.StateDB.TxLogByDataVersionRead(common.BigToAddress(address),fileIdArr,hex.EncodeToString(dataVersion.Bytes()))
 	var i int
 	var zeroAddress common.Address
 	if err == nil {
