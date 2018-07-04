@@ -1108,7 +1108,7 @@ func (s *PublicTransactionPoolAPI) GetTransactionByBlockNumberAndIndex(ctx conte
 // GetTransactionByBlockNumberRange returns the transaction of special type from  startblocknumber to endblocknumber.
 func (s *PublicTransactionPoolAPI) GetTransactionByBlockNumberRange(ctx context.Context, startBlockNr rpc.BlockNumber, endBlockNr rpc.BlockNumber, txType *big.Int) ([]*RPCTransaction, error) {
 	var specialTx []*RPCTransaction
-	if startBlockNr >= endBlockNr {
+	if startBlockNr > endBlockNr {
 		return nil,errors.New("endBlockNumber large then startBlockNumber")
 	}
 	//最大遍历区间86400
