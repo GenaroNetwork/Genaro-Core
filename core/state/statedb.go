@@ -710,11 +710,24 @@ func (self *StateDB)UpdateStake(id common.Address, stake uint64, blockNumber uin
 }
 
 
-func (self *StateDB)DeleteStake(id common.Address, stake uint64) (bool, uint64) {
+func (self *StateDB)DeleteStake(id common.Address, stake uint64, blockNumber uint64) (bool, uint64) {
 	stateObject := self.GetOrNewStateObject(id)
 	if stateObject != nil {
-		alreadyPunishment := stateObject.DeleteStake(stake)
+		alreadyPunishment := stateObject.DeleteStake(stake,blockNumber)
 		return true, alreadyPunishment
+	}
+	return false, 0
+}
+
+func (self *StateDB)BackStake(id common.Address, blockNumber uint64) (bool, uint64) {
+	stateObject := self.GetOrNewStateObject(id)
+	if stateObject != nil {
+		stake := stateObject.GetStake()
+		stateObject.DeleteStake(stake,blockNumber)
+		mount := big.NewInt(int64(stake))
+		mount.Mul(mount, big.NewInt(1000000000000000000))
+		stateObject.AddBalance(mount)
+		return true, stake
 	}
 	return false, 0
 }
@@ -764,6 +777,15 @@ func (self *StateDB)GetCandidates() Candidates{
 		return stateObject.GetCandidates()
 	}
 	return nil
+}
+
+func (self *StateDB)GetCommitteeRank(blockNumStart uint64, blockNumEnd uint64) ([]common.Address, []uint64){
+	stateObject := self.getStateObject(common.CandidateSaveAddress)
+	if stateObject != nil {
+		candidateInfos := self.GetCandidatesInfoInRange(blockNumStart, blockNumEnd)
+		return Rank(candidateInfos)
+	}
+	return nil,nil
 }
 
 // get CandidateInfo in given range
@@ -895,9 +917,10 @@ func (self *StateDB)TxLogBydataVersionUpdate(address common.Address,fileID [32]b
 			return false
 		}
 		TimeLimit := (resultTmp.EndTime - time.Now().Unix())/86400
-		timeLimitGas := big.NewInt(TimeLimit * int64(len(resultTmp.MortgageTable)) * common.OneDaySyncLogGsa)
+		tmp := big.NewInt(TimeLimit * int64(len(resultTmp.MortgageTable)))
+		timeLimitGas := tmp.Mul(tmp,self.GetOneDaySyncLogGsaCost())
 		stateObject.setBalance(timeLimitGas)
-		newStateObject := self.getStateObject(common.SpecialSyncAddress)
+		newStateObject := self.getStateObject(common.OfficialAddress)
 		newStateObject.AddBalance(timeLimitGas)
 		return true
 	}
@@ -926,10 +949,13 @@ func (self *StateDB)SpecialTxTypeSyncSidechainStatus(address common.Address, Spe
 }
 
 func (self *StateDB)SyncStakeNode(address common.Address,s []string) error {
+
+	currentStakePrice := self.GetStakePerNodePrice()
+
 	stateObject := self.GetOrNewStateObject(address)
 	var err error = nil
 	if stateObject != nil {
-		err = stateObject.SyncStakeNode(s)
+		err = stateObject.SyncStakeNode(s, currentStakePrice)
 	}
 	return err
 }
@@ -954,18 +980,33 @@ func (self *StateDB)GetAddressByNode(s string) string {
 }
 
 //add one back stake to list
-func (self *StateDB)AddAlreadyBackStack(refund common.AlreadyBackStake) error {
-	return nil
+func (self *StateDB)AddAlreadyBackStack(backStack common.AlreadyBackStake) bool {
+	stateObject := self.GetOrNewStateObject(common.BackStakeAddress)
+	if stateObject != nil {
+		stateObject.AddAlreadyBackStack(backStack)
+		return true
+	}
+	return false
 }
 
 //get all back stake
-func (self *StateDB)GetAlreadyBackStakeList() []common.AlreadyBackStake {
-	return nil
+func (self *StateDB)GetAlreadyBackStakeList() (bool,common.BackStakeList) {
+	stateObject := self.GetOrNewStateObject(common.BackStakeAddress)
+	if stateObject != nil {
+		backStacks := stateObject.GetAlreadyBackStakeList()
+		return true,backStacks
+	}
+	return false,nil
 }
 
 //set back stake list
-func (self *StateDB)SetAlreadyBackStakeList([]common.AlreadyBackStake) error {
-	return nil
+func (self *StateDB)SetAlreadyBackStakeList(backStacks common.BackStakeList) bool {
+	stateObject := self.GetOrNewStateObject(common.BackStakeAddress)
+	if stateObject != nil {
+		stateObject.SetAlreadyBackStakeList(backStacks)
+		return true
+	}
+	return false
 }
 
 
@@ -1012,3 +1053,124 @@ func (self *StateDB) CheckUnlockSharedKey(address common.Address,shareKeyId stri
 	}
 	return false
 }
+
+func (self *StateDB)UpdateBucketApplyPrice(address common.Address,	price *hexutil.Big) bool {
+	stateObject := self.GetOrNewStateObject(address)
+	if stateObject != nil {
+		stateObject.UpdateBucketApplyPrice(price)
+                return true
+        }
+        return false
+}
+
+func (self *StateDB)AddLastRootState(statehash common.Hash, blockNumber uint64) bool {
+	stateObject := self.getStateObject(common.LastSynStateSaveAddress)
+	if stateObject != nil {
+		stateObject.AddLastRootState(statehash,blockNumber)
+		return true
+	}
+	return false
+}
+
+func (self *StateDB)GetBucketApplyPrice() *big.Int {
+	stateObject := self.GetOrNewStateObject(common.GenaroPriceAddress)
+	if stateObject != nil {
+		return stateObject.GetBucketApplyPrice()
+	}
+	return common.DefaultBucketApplyGasPerGPerDay
+}
+
+func (self *StateDB)UpdateTrafficApplyPrice(address common.Address, price *hexutil.Big) bool {
+	stateObject := self.GetOrNewStateObject(address)
+	if stateObject != nil {
+		stateObject.UpdateTrafficApplyPrice(price)
+                return true
+        }
+        return false
+}
+
+func (self *StateDB)SetLastSynBlockNum(blockNumber uint64) bool {
+	stateObject := self.getStateObject(common.LastSynStateSaveAddress)
+	if stateObject != nil {
+		stateObject.SetLastSynBlockNum(blockNumber)
+		return true
+	}
+	return false
+}
+
+func (self *StateDB)GetTrafficApplyPrice() *big.Int {
+	stateObject := self.GetOrNewStateObject(common.GenaroPriceAddress)
+	if stateObject != nil {
+		return stateObject.GetTrafficApplyPrice()
+	}
+	return common.DefaultTrafficApplyGasPerG
+}
+
+func (self *StateDB)UpdateStakePerNodePrice(address common.Address, price *hexutil.Big) bool {
+	stateObject := self.GetOrNewStateObject(address)
+	if stateObject != nil {
+		stateObject.UpdateStakePerNodePrice(price)
+		return true
+	}
+	return false
+}
+
+func (self *StateDB)GetStakePerNodePrice() *big.Int {
+	stateObject := self.GetOrNewStateObject(common.GenaroPriceAddress)
+	if stateObject != nil {
+		return stateObject.GetStakePerNodePrice()
+	}
+	return common.DefaultStakeValuePerNode
+}
+
+func (self *StateDB)GetGenaroPrice() *types.GenaroPrice {
+	stateObject := self.GetOrNewStateObject(common.GenaroPriceAddress)
+	if stateObject != nil {
+		return stateObject.GetGenaroPrice()
+        }
+        return nil
+}
+
+func (self *StateDB)GetLastSynState() *types.LastSynState{
+	stateObject := self.getStateObject(common.LastSynStateSaveAddress)
+	if stateObject != nil {
+		return stateObject.GetLastSynState()
+	}
+	return nil
+}
+
+
+func (self *StateDB)UpdateOneDayGesCost(address common.Address, price *hexutil.Big) bool {
+	stateObject := self.GetOrNewStateObject(address)
+	if stateObject != nil {
+		stateObject.UpdateOneDayGesCost(price)
+		return true
+	}
+	return false
+}
+
+func (self *StateDB)UpdateOneDaySyncLogGsaCost(address common.Address, price *hexutil.Big) bool {
+	stateObject := self.GetOrNewStateObject(address)
+	if stateObject != nil {
+		stateObject.UpdateOneDaySyncLogGsaCost(price)
+		return true
+	}
+	return false
+}
+
+func (self *StateDB)GetOneDayGesCost() *big.Int {
+	stateObject := self.GetOrNewStateObject(common.GenaroPriceAddress)
+	if stateObject != nil {
+		return stateObject.GetOneDayGesCost()
+	}
+	return common.DefaultOneDayMortgageGes
+}
+
+func (self *StateDB)GetOneDaySyncLogGsaCost() *big.Int {
+	stateObject := self.GetOrNewStateObject(common.GenaroPriceAddress)
+	if stateObject != nil {
+		return stateObject.GetOneDaySyncLogGsaCost()
+	}
+	return common.DefaultOneDaySyncLogGsaCost
+}
+

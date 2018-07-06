@@ -13,27 +13,48 @@ type SpecialTxInput struct {
 	Type   *hexutil.Big `json:"type"`
 	BlockNumber string  `json:"blockNr"`
 	Message string      `json:"msg"`
+	GenaroPrice
 }
 
-func (s SpecialTxInput) SpecialCost() *big.Int {
+type GenaroPrice struct {
+	BucketApplyGasPerGPerDay *hexutil.Big `json:"bucketPricePerGperDay"`
+	TrafficApplyGasPerG *hexutil.Big `json:"trafficPricePerG"`
+	StakeValuePerNode *hexutil.Big `json:"stakeValuePerNode"`
+	OneDayMortgageGes	*hexutil.Big `json:"oneDayMortgageGes"`
+	OneDaySyncLogGsaCost  *hexutil.Big `json:"oneDaySyncLogGsaCost"`
+}
+
+func (s SpecialTxInput) SpecialCost(currentPrice *GenaroPrice) *big.Int {
 	rt := new(big.Int)
 	switch s.Type.ToInt() {
 	case common.SpecialTxTypeStakeSync:
 		return rt.SetUint64(s.Stake*1000000000000000000)
 	case common.SpecialTxTypeSpaceApply:
-		var totalCost int64
+		var totalCost *big.Int
 		for _, v := range s.Buckets {
+			var bucketPrice *big.Int
+			if currentPrice == nil || currentPrice.BucketApplyGasPerGPerDay == nil {
+				bucketPrice = common.DefaultBucketApplyGasPerGPerDay
+			}else{
+				bucketPrice = currentPrice.BucketApplyGasPerGPerDay.ToInt()
+			}
 			duration := math.Abs(float64(v.TimeStart) - float64(v.TimeEnd))
 
-			oneCost := int64(v.Size) * int64(math.Ceil(duration/10)) * common.BucketApplyGasPerGPerDay
+			oneCost := bucketPrice.Mul(bucketPrice, big.NewInt(int64(v.Size) * int64(math.Ceil(duration/10))))
 
-			totalCost += oneCost
+			totalCost.Add(totalCost, oneCost)
 		}
 
-		totalGas := big.NewInt(totalCost)
-		return totalGas
+		return totalCost
+
 	case common.SpecialTxTypeTrafficApply:
-		totalGas := big.NewInt(int64(s.Traffic) * common.TrafficApplyGasPerG)
+		var trafficPrice *big.Int
+		if currentPrice == nil || currentPrice.TrafficApplyGasPerG == nil {
+			trafficPrice = common.DefaultTrafficApplyGasPerG
+		}else{
+			trafficPrice = currentPrice.TrafficApplyGasPerG.ToInt()
+		}
+		totalGas := trafficPrice.Mul(trafficPrice, big.NewInt(int64(s.Traffic)))
 		return totalGas
 	case common.SpecialTxTypeMortgageInit:
 		sumMortgageTable := new(big.Int)
@@ -42,7 +63,7 @@ func (s SpecialTxInput) SpecialCost() *big.Int {
 			sumMortgageTable = sumMortgageTable.Add(sumMortgageTable, v.ToInt())
 		}
 		temp := s.SpecialTxTypeMortgageInit.TimeLimit.ToInt().Mul(s.SpecialTxTypeMortgageInit.TimeLimit.ToInt(), big.NewInt(int64(len(mortgageTable))))
-		timeLimitGas := temp.Mul(temp, big.NewInt(common.OneDayGes))
+		timeLimitGas := temp.Mul(temp, common.DefaultOneDayMortgageGes)
 		sumMortgageTable.Add(sumMortgageTable, timeLimitGas)
 		return sumMortgageTable
 	default:
@@ -111,3 +132,26 @@ type FileIDArr struct {
 
 //Cross-chain storage processing
 type SpecialTxTypeMortgageInit FileIDArr
+
+
+type LastSynState struct {
+	LastRootStates map[common.Hash]uint64	`json:"LastRootStates"`
+	LastSynBlockNum uint64				`json:"LastSynBlockNum"`
+}
+
+func (lastSynState *LastSynState)AddLastSynState(blockhash common.Hash, blockNumber uint64){
+	lastSynState.LastRootStates[blockhash] = blockNumber
+	lenth := len(lastSynState.LastRootStates)
+	if uint64(lenth) > common.SynBlockLen {
+		var delBlockHash common.Hash
+		var delBlockBum uint64 = ^uint64(0)
+		for blockHash, blockBum := range lastSynState.LastRootStates {
+			if blockBum < delBlockBum {
+				delBlockHash = blockHash
+				blockBum = delBlockBum
+			}
+		}
+		delete(lastSynState.LastRootStates, delBlockHash)
+	}
+}
+

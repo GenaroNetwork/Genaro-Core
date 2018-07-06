@@ -592,8 +592,10 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		return ErrInsufficientFunds
 	}
 
+	currentPrice := pool.currentState.GetGenaroPrice()
+
 	totalCost := new(big.Int)
-	totalCost.Add(tx.Cost(), tx.SpecialCost())
+	totalCost.Add(tx.Cost(), tx.SpecialCost(currentPrice))
 	if pool.currentState.GetBalance(from).Cmp(totalCost) < 0 {
 		return ErrInsufficientFundsForSpecialTx
 	}
@@ -623,19 +625,20 @@ func (pool *TxPool)dispatchHandlerValidateTx(input []byte, caller common.Address
 	case common.SpecialTxTypeStakeSync.Uint64(): // 同步stake
 		return vm.CheckStakeTx(s)
 	case common.SpecialTxTypeHeftSync.Uint64(): // 同步heft
-		return vm.CheckSyncHeftTx(caller)
+		return vm.CheckSyncHeftTx(caller, s)
 	case common.SpecialTxTypeSpaceApply.Uint64(): // 申请存储空间
 		return vm.CheckApplyBucketTx(s)
 	case common.SpecialTxTypeMortgageInit.Uint64(): // 交易代表用户押注初始化交易
 		return  vm.CheckspecialTxTypeMortgageInitParameter(s,s.SpecialTxTypeMortgageInit.FromAccount)
 	case common.SpecialTxTypeSyncSidechainStatus.Uint64(): //同步日志+结算
-		return vm.CheckSpecialTxTypeSyncSidechainStatusParameter(s)
+		return vm.CheckSpecialTxTypeSyncSidechainStatusParameter(s, caller)
 	case common.SpecialTxTypeTrafficApply.Uint64(): //用户申购流量
 		return vm.CheckTrafficTx(s)
 	case common.SpecialTxTypeSyncNode.Uint64(): //用户stake后同步节点Id
 		callerStake, _ := pool.currentState.GetStake(caller)
 		existNodes := pool.currentState.GetStorageNodes(caller)
-		return vm.CheckSyncNodeTx(callerStake, existNodes, s.Node)
+		currentStakePrice := pool.currentState.GetStakePerNodePrice()
+		return vm.CheckSyncNodeTx(callerStake, existNodes, s.Node, currentStakePrice)
 	case common.SynchronizeShareKey.Uint64():
 		return vm.CheckSynchronizeShareKeyParameter(s)
 	case common.SpecialTxTypeSyncFielSharePublicKey.Uint64(): // 用户同步自己文件分享的publicKey到链上
@@ -643,9 +646,13 @@ func (pool *TxPool)dispatchHandlerValidateTx(input []byte, caller common.Address
 	case common.UnlockSharedKey.Uint64():
 		return vm.CheckUnlockSharedKeyParameter(s)
 	case common.SpecialTxTypePunishment.Uint64(): // 用户恶意行为后的惩罚措施
-		return vm.CheckPunishmentTx(caller)
+		return vm.CheckPunishmentTx(caller,s)
+	case common.SpecialTxTypePriceRegulation.Uint64(): //价格调整
+		return vm.CheckPriceRegulation(caller)
+	case common.SpecialTxSynState.Uint64():
+		return vm.CheckSynStateTx(caller)
 	}
-	return err
+	return errors.New("undefined type of special transaction")
 }
 
 // add validates a transaction and inserts it into the non-executable queue for

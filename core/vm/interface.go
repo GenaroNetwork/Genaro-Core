@@ -71,7 +71,7 @@ type StateDB interface {
 	GetHeftRangeDiff(common.Address, uint64, uint64) uint64
 
 	UpdateStake(common.Address, uint64, uint64) bool
-	DeleteStake(common.Address, uint64) (bool, uint64)
+	DeleteStake(common.Address, uint64, uint64) (bool, uint64)
 	GetStake(common.Address) (uint64, error)
 	GetStakeLog(common.Address) types.NumLogs
 	GetStakeRangeDiff(common.Address, uint64, uint64) uint64
@@ -103,14 +103,34 @@ type StateDB interface {
 	SyncNode2Address(common.Address, []string, string) error
 	GetAddressByNode(string) string
 
-	AddAlreadyBackStack(refund common.AlreadyBackStake) error
-	GetAlreadyBackStakeList() []common.AlreadyBackStake
-	SetAlreadyBackStakeList([]common.AlreadyBackStake) error
+	AddAlreadyBackStack(backStack common.AlreadyBackStake) bool
+	GetAlreadyBackStakeList() (bool,common.BackStakeList)
+	SetAlreadyBackStakeList(common.BackStakeList) bool
 
 	SynchronizeShareKey(common.Address,types.SynchronizeShareKey) bool
 
 	UpdateFileSharePublicKey(common.Address, string) bool
 	UnlockSharedKey(common.Address,string) bool
+
+	UpdateBucketApplyPrice(common.Address, *hexutil.Big) bool
+	GetBucketApplyPrice() *big.Int
+
+	UpdateTrafficApplyPrice(common.Address, *hexutil.Big) bool
+	GetTrafficApplyPrice() *big.Int
+
+	UpdateStakePerNodePrice(common.Address, *hexutil.Big) bool
+	GetStakePerNodePrice() *big.Int
+
+	GetGenaroPrice() *types.GenaroPrice
+	UpdateOneDayGesCost(common.Address, *hexutil.Big) bool
+	UpdateOneDaySyncLogGsaCost(common.Address, *hexutil.Big) bool
+
+	GetOneDayGesCost() *big.Int
+	GetOneDaySyncLogGsaCost() *big.Int
+	
+	AddLastRootState(statehash common.Hash, blockNumber uint64) bool
+	SetLastSynBlockNum(blockNumber uint64) bool
+	GetLastSynState() *types.LastSynState
 }
 
 // CallContext provides a basic interface for the EVM calling conventions. The EVM EVM

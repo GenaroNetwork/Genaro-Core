@@ -1,7 +1,22 @@
 #!/bin/bash
 
-#获取keystore
-#ls keystore/* > fileName 
+read -t 30 -p "please enter the number of committees(1-120):" committees
+
+if [[ $committees -gt 121 ]];then
+	echo "22"
+	exit
+fi
+
+if [[ $committees -le 0 ]];then
+	echo "333"
+	exit
+fi
+
+cd ../
+make geth
+cd automatedScript/
+
+ls keystore/* | head -n $committees > fileName
 
 #计数器
 i=1
@@ -15,15 +30,20 @@ rpcport=8549
 rm genaro.json
 
 # rm chainNode
-rm -r chainNode/chainNode*
+
+if [ -d "./chainNode" ];then
+	rm -r chainNode/*
+fi
 
 # rm nohupNodeLog
-rm -r nohupNodeLog/nohupNode*
+
+if [ -d "./nohupNodeLog" ];then
+	rm -r nohupNodeLog/*
+fi
 
 ./generateGenesisJson.sh > ./../cmd/GenGenaroGenesis/genesis.json
 
 cd ../cmd/GenGenaroGenesis/
-
 go build
 
 cp `./GenGenaroGenesis -f genesis.json | xargs` ../../../Genaro-Core/automatedScript/genaro.json
@@ -48,6 +68,15 @@ if [ "$tmp" == "" ];then
    	exit
 fi
 
+
+if [ ! -d "./chainNode" ];then
+	mkdir ./chainNode
+fi
+
+if [ ! -d "./nohupNodeLog" ];then
+	mkdir ./nohupNodeLog
+fi
+
 #遍历keystore
 for line in `cat fileName`
 do 
@@ -59,13 +88,13 @@ do
 
 
 	#初始化
-	/root/gopath/src/github.com/GenaroNetwork/Genaro-Core/build/bin/geth  init  ./genaro.json --datadir "./chainNode/chainNode$i"
+	./../build/bin/geth  init  ./genaro.json --datadir "./chainNode/chainNode$i"
 	
 	#key复制到keystore下
 	cp $line  ./chainNode/chainNode$i/keystore/${line##*/}
 	
 	#启动
-	nohup /root/gopath/src/github.com/GenaroNetwork/Genaro-Core/build/bin/geth --rpc --rpccorsdomain "*" --rpcvhosts=* --rpcapi "eth,net,web3,admin,personal,miner" --datadir "./chainNode/chainNode$i" --port "$port" --rpcport "$rpcport" --rpcaddr 0.0.0.0  --bootnodes "$bootnode_addr" --unlock "0x${line##*--}" --password "./password"  --syncmode "full" --mine  > ./nohupNodeLog/nohupNode$i.out &
+	nohup ./../build/bin/geth --rpc --rpccorsdomain "*" --rpcvhosts=* --rpcapi "eth,net,web3,admin,personal,miner" --datadir "./chainNode/chainNode$i" --port "$port" --rpcport "$rpcport" --rpcaddr 0.0.0.0  --bootnodes "$bootnode_addr" --unlock "0x${line##*--}" --password "./password"  --syncmode "full" --mine  > ./nohupNodeLog/nohupNode$i.out &
 	let "i=$i+1"
 	let "port=$port+1"
 	let "rpcport=$rpcport+1"

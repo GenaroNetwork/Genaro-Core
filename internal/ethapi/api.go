@@ -210,12 +210,14 @@ func (s *PublicBlockChainAPI) GetCandidates(ctx context.Context,blockNr rpc.Bloc
 	return state.GetCandidates()
 }
 
-func (s *PublicBlockChainAPI) GetCommit(ctx context.Context,blockNr rpc.BlockNumber) []common.Address {
+// get commitees by rank
+func (s *PublicBlockChainAPI) GetCommitteeRank(ctx context.Context,blockNr rpc.BlockNumber) []common.Address {
 	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
 	if state == nil || err != nil {
 		return nil
 	}
-	return state.GetCandidates()
+	committees,_ := state.GetCommitteeRank(0,uint64(blockNr))
+	return committees
 }
 
 // PrivateAccountAPI provides an API to access accounts managed by this node.
@@ -1106,8 +1108,8 @@ func (s *PublicTransactionPoolAPI) GetTransactionByBlockNumberAndIndex(ctx conte
 // GetTransactionByBlockNumberRange returns the transaction of special type from  startblocknumber to endblocknumber.
 func (s *PublicTransactionPoolAPI) GetTransactionByBlockNumberRange(ctx context.Context, startBlockNr rpc.BlockNumber, endBlockNr rpc.BlockNumber, txType *big.Int) ([]*RPCTransaction, error) {
 	var specialTx []*RPCTransaction
-	if startBlockNr >= endBlockNr {
-		return nil,errors.New("endBlockNumber large then startBlockNumber")
+	if startBlockNr > endBlockNr {
+		return nil,errors.New("startBlockNumber can't large then endBlockNumber")
 	}
 	//最大遍历区间86400
 	var maxRange int64 = 86400
@@ -1164,15 +1166,18 @@ func (s *PublicTransactionPoolAPI) GetTrafficTxInfo(ctx context.Context, startBl
 		return nil, err
 	}
 	var retArr[]*rpcTrafficInfo
-	for _, v := range rpcTx {
-		var s types.SpecialTxInput
-		json.Unmarshal([]byte(v.Input), &s)
-		r := new(rpcTrafficInfo)
-		r.NodeId = s.NodeId
-		r.Traffic = s.Traffic
-		r.Hash = v.Hash
-		retArr = append(retArr, r)
-
+	for _, tx := range rpcTx {
+		if transactionReceipt, err:= s.GetTransactionReceipt(ctx,tx.Hash); err == nil && transactionReceipt != nil {
+			if status, ok := transactionReceipt["status"]; ok && uint(status.(hexutil.Uint)) == types.ReceiptStatusSuccessful {
+				var s types.SpecialTxInput
+				json.Unmarshal([]byte(tx.Input), &s)
+				r := new(rpcTrafficInfo)
+				r.NodeId = s.NodeId
+				r.Traffic = s.Traffic
+				r.Hash = tx.Hash
+				retArr = append(retArr, r)
+			}
+		}
 	}
 	return retArr,nil
 }
@@ -1196,21 +1201,63 @@ func (s *PublicTransactionPoolAPI) GetBucketTxInfo(ctx context.Context, startBlo
 	}
 	var retArr []*rpcBucketPropertie
 	for _, tx := range rpcTx {
-		var s types.SpecialTxInput
-		json.Unmarshal([]byte(tx.Input), &s)
-		for _, v := range s.Buckets {
-			r := new(rpcBucketPropertie)
-			r.BucketId = v.BucketId
-			r.TimeStart = v.TimeStart
-			r.TimeEnd = v.TimeEnd
-			r.Backup = v.Backup
-			r.Size = v.Size
-			r.NodeId = s.NodeId
-			r.Hash = tx.Hash
-			retArr = append(retArr, r)
+		if transactionReceipt, err:= s.GetTransactionReceipt(ctx,tx.Hash); err == nil && transactionReceipt != nil {
+			if status, ok := transactionReceipt["status"]; ok && uint(status.(hexutil.Uint)) == types.ReceiptStatusSuccessful {
+				var s types.SpecialTxInput
+				json.Unmarshal([]byte(tx.Input), &s)
+				for _, v := range s.Buckets {
+					r := new(rpcBucketPropertie)
+					r.BucketId = v.BucketId
+					r.TimeStart = v.TimeStart
+					r.TimeEnd = v.TimeEnd
+					r.Backup = v.Backup
+					r.Size = v.Size
+					r.NodeId = s.NodeId
+					r.Hash = tx.Hash
+					retArr = append(retArr, r)
+				}
+			}
 		}
 	}
 	return retArr,nil
+}
+
+
+func (s *PublicTransactionPoolAPI) GetGenaroPrice(ctx context.Context) map[string]string {
+	genaroPriceMap := make(map[string]string)
+	genaroPriceMap["bucketPricePerGperDay"] = common.DefaultBucketApplyGasPerGPerDay.String()
+	genaroPriceMap["trafficPricePerG"] = common.DefaultTrafficApplyGasPerG.String()
+	genaroPriceMap["stakeValuePerNode"] = common.DefaultStakeValuePerNode.String()
+	genaroPriceMap["oneDayMortgageGes"] = common.DefaultOneDayMortgageGes.String()
+	genaroPriceMap["oneDaySyncLogGsaCost"] = common.DefaultOneDaySyncLogGsaCost.String()
+
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, rpc.LatestBlockNumber)
+	if state == nil || err != nil {
+		return genaroPriceMap
+	}
+
+	if genaroPrice := state.GetGenaroPrice(); genaroPrice != nil {
+		if genaroPrice.BucketApplyGasPerGPerDay != nil{
+			genaroPriceMap["bucketPricePerGperDay"] = genaroPrice.BucketApplyGasPerGPerDay.String()
+		}
+		if genaroPrice.TrafficApplyGasPerG != nil{
+			genaroPriceMap["trafficPricePerG"] = genaroPrice.TrafficApplyGasPerG.String()
+		}
+
+		if genaroPrice.BucketApplyGasPerGPerDay != nil{
+			genaroPriceMap["stakeValuePerNode"] = genaroPrice.StakeValuePerNode.String()
+		}
+
+		if genaroPrice.OneDayMortgageGes != nil{
+			genaroPriceMap["oneDayMortgageGes"] = genaroPrice.OneDayMortgageGes.String()
+		}
+
+		if genaroPrice.OneDaySyncLogGsaCost != nil{
+			genaroPriceMap["oneDaySyncLogGsaCost"] = genaroPrice.OneDaySyncLogGsaCost.String()
+		}
+	}
+
+	return genaroPriceMap
 }
 
 func (s *PublicTransactionPoolAPI) GetAddressByNode(ctx context.Context, str string) string {
@@ -1421,10 +1468,17 @@ func (args *SendTxArgs) toTransaction() *types.Transaction {
 		return types.NewContractCreation(uint64(*args.Nonce), (*big.Int)(args.Value), uint64(*args.Gas), (*big.Int)(args.GasPrice), input)
 	}
 
+	if args.ExtraData == "" {
+		return types.NewTransaction(uint64(*args.Nonce), *args.To, (*big.Int)(args.Value), uint64(*args.Gas), (*big.Int)(args.GasPrice), input)
+	}
+
 	//deal special transaction
 	if *args.To == common.SpecialSyncAddress {
 		var s types.SpecialTxInput
-		json.Unmarshal([]byte(args.ExtraData), &s)
+		if err := json.Unmarshal([]byte(args.ExtraData), &s); err != nil {
+			// 这里发现特殊交易的参数错误后，不反悔错误。错误的返回同意由tx_pool	.go 中的dispatchHandlerValidateTx方法处理返回
+			return  types.NewTransaction(uint64(*args.Nonce), *args.To, (*big.Int)(args.Value), uint64(*args.Gas), (*big.Int)(args.GasPrice), []byte(args.ExtraData))
+		}
 		switch s.Type.ToInt().Uint64() {
 		case common.SpecialTxTypeMortgageInit.Uint64():
 			if len(s.SpecialTxTypeMortgageInit.MortgageTable) > 8 {
@@ -1455,13 +1509,11 @@ func (args *SendTxArgs) toTransaction() *types.Transaction {
 			input,_ := json.Marshal(s)
 			return  types.NewTransaction(uint64(*args.Nonce), *args.To, (*big.Int)(args.Value), uint64(*args.Gas), (*big.Int)(args.GasPrice), input)
 		case common.SpecialTxTypeSyncSidechainStatus.Uint64():
-			if common.SyncLogAddress== args.From {
-				timeUnix := strconv.FormatInt(time.Now().Unix(),10)
-				timeUnixSha256 := sha256.Sum256([]byte(timeUnix))
-				s.SpecialTxTypeMortgageInit.Dataversion = hex.EncodeToString(timeUnixSha256[:])
-				input,_ := json.Marshal(s)
-				return  types.NewTransaction(uint64(*args.Nonce), *args.To, (*big.Int)(args.Value), uint64(*args.Gas), (*big.Int)(args.GasPrice), input)
-			}
+			timeUnix := strconv.FormatInt(time.Now().Unix(),10)
+			timeUnixSha256 := sha256.Sum256([]byte(timeUnix))
+			s.SpecialTxTypeMortgageInit.Dataversion = hex.EncodeToString(timeUnixSha256[:])
+			input,_ := json.Marshal(s)
+			return  types.NewTransaction(uint64(*args.Nonce), *args.To, (*big.Int)(args.Value), uint64(*args.Gas), (*big.Int)(args.GasPrice), input)
 		case common.SynchronizeShareKey.Uint64():
 			timeUnix := strconv.FormatInt(time.Now().Unix(),10)
 			timeUnixSha256 := sha256.Sum256([]byte(timeUnix))
@@ -1521,7 +1573,6 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 	}
 	// Assemble the transaction and sign with the wallet
 	tx := args.toTransaction()
-
 	var chainID *big.Int
 	if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
 		chainID = config.ChainId
