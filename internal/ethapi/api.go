@@ -1433,7 +1433,10 @@ func (args *SendTxArgs) toTransaction() *types.Transaction {
 	//deal special transaction
 	if *args.To == common.SpecialSyncAddress {
 		var s types.SpecialTxInput
-		json.Unmarshal([]byte(args.ExtraData), &s)
+		err := json.Unmarshal([]byte(args.ExtraData), &s)
+		if nil != err{
+			return nil
+		}
 		switch s.Type.ToInt().Uint64() {
 		case common.SpecialTxTypeMortgageInit.Uint64():
 			if len(s.SpecialTxTypeMortgageInit.MortgageTable) > 8 {
@@ -1532,7 +1535,7 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 	// Assemble the transaction and sign with the wallet
 	tx := args.toTransaction()
 	if nil == tx {
-		return common.Hash{}, errors.New(`sync log Address error`)
+		return common.Hash{}, errors.New(`parameter error`)
 	}
 	var chainID *big.Int
 	if config := s.b.ChainConfig(); config.IsEIP155(s.b.CurrentBlock().Number()) {
