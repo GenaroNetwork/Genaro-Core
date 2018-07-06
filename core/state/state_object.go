@@ -994,7 +994,7 @@ func (self *stateObject)SyncStakeNode(s []string) error {
 
 func (self *stateObject)SyncNode2Address(s []string, address string) error {
 	d := make(map[string]string)
-	if self.data.CodeHash != nil {
+	if self.data.CodeHash == nil {
 		for _, v := range s {
 			d[v] = address
 		}
