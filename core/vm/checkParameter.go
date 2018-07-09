@@ -6,6 +6,7 @@ import (
 	"time"
 	"github.com/GenaroNetwork/Genaro-Core/common"
 	"errors"
+	"github.com/GenaroNetwork/Genaro-Core/core/state"
 )
 
 func CheckSpecialTxTypeSyncSidechainStatusParameter( s types.SpecialTxInput) error {
@@ -117,13 +118,21 @@ func CheckTrafficTx(s types.SpecialTxInput) error {
 	return nil
 }
 
-func CheckSyncNodeTx(stake uint64, existNodes, toAddNodes []string) error {
+func CheckSyncNodeTx(stake uint64, existNodes, toAddNodes []string, db *state.StateDB) error {
 	var nodeNum int
 	if toAddNodes != nil{
 		nodeNum = len(toAddNodes)
 	}else{
 		return errors.New("none nodes to synchronize")
 	}
+
+	//判断节点已经被自己或者其他人同步过了
+	for _, v := range toAddNodes {
+		if db.GetAddressByNode(v) != "" {
+			return errors.New("the input node have been bound by themselves or others")
+		}
+	}
+
 
 	if existNodes != nil {
 		nodeNum += len(existNodes)
@@ -148,4 +157,21 @@ func CheckSyncFileSharePublicKeyTx(s types.SpecialTxInput) error {
 		return errors.New("public key for file share can't be null")
 	}
 	return nil
+}
+
+func CheckUnbindNodeTx(caller common.Address,s types.SpecialTxInput, existNodes []string) error{
+	if existNodes == nil {
+		return errors.New("none node of this account need to unbind")
+	}
+
+	if s.NodeId2 == "" {
+		return errors.New("nodeId is null")
+	}
+
+	for _, v := range existNodes{
+		if v == s.NodeId2 {
+			return nil
+		}
+	}
+	return errors.New("this node does not belong to this account")
 }

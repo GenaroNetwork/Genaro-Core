@@ -58,6 +58,9 @@ var (
 	SpecialTxTypePunishment  = big.NewInt(10)
 	// 退注特殊交易
 	SpecialTxTypeBackStake  = big.NewInt(11)
+
+	//解除节点绑定
+	SpecialTxUnbindNode = big.NewInt(14)
 )
 	//费用
 

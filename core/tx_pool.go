@@ -635,7 +635,8 @@ func (pool *TxPool)dispatchHandlerValidateTx(input []byte, caller common.Address
 	case common.SpecialTxTypeSyncNode.Uint64(): //用户stake后同步节点Id
 		callerStake, _ := pool.currentState.GetStake(caller)
 		existNodes := pool.currentState.GetStorageNodes(caller)
-		return vm.CheckSyncNodeTx(callerStake, existNodes, s.Node)
+		stateDB := pool.currentState
+		return vm.CheckSyncNodeTx(callerStake, existNodes, s.Node, stateDB)
 	case common.SynchronizeShareKey.Uint64():
 		return vm.CheckSynchronizeShareKeyParameter(s)
 	case common.SpecialTxTypeSyncFielSharePublicKey.Uint64(): // 用户同步自己文件分享的publicKey到链上
@@ -644,6 +645,9 @@ func (pool *TxPool)dispatchHandlerValidateTx(input []byte, caller common.Address
 		return vm.CheckUnlockSharedKeyParameter(s)
 	case common.SpecialTxTypePunishment.Uint64(): // 用户恶意行为后的惩罚措施
 		return vm.CheckPunishmentTx(caller)
+	case common.SpecialTxUnbindNode.Uint64(): //解除绑定
+		existNodes := pool.currentState.GetStorageNodes(caller)
+		return vm.CheckUnbindNodeTx(caller, s, existNodes)
 	}
 	return err
 }
