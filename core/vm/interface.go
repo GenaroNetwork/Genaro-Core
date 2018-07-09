@@ -111,6 +111,10 @@ type StateDB interface {
 
 	UpdateFileSharePublicKey(common.Address, string) bool
 	UnlockSharedKey(common.Address,string) bool
+
+	UnbindNode(common.Address, string) error
+	UbindNode2Address(common.Address, string) error
+	GetStorageNodes(address common.Address)[]string
 }
 
 // CallContext provides a basic interface for the EVM calling conventions. The EVM EVM

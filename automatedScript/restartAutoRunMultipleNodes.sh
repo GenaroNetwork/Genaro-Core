@@ -1,23 +1,5 @@
 #!/bin/bash
 
-read -t 30 -p "please enter the number of committees(2-120):" committees
-
-if [[ $committees -gt 121 ]];then
-	echo "committees(2-120)"
-	exit
-fi
-
-if [[ $committees -le 1 ]];then
-	echo "committees(2-120)"
-	exit
-fi
-
-cd ../
-make geth
-cd automatedScript/
-
-ls keystore/* | head -n $committees > fileName
-
 #计数器
 i=1
 ws=1
@@ -27,30 +9,9 @@ port=30315
 #rpcport端口
 rpcport=8549
 wsport=8545
-rm genaro.json
-
-# rm chainNode
-
-if [ -d "./chainNode" ];then
-	rm -r chainNode/*
-fi
-
-# rm nohupNodeLog
-
-if [ -d "./nohupNodeLog" ];then
-	rm -r nohupNodeLog/*
-fi
-
-./generateGenesisJson.sh > ./../cmd/GenGenaroGenesis/genesis.json
-
-cd ../cmd/GenGenaroGenesis/
-go build
-
-cp `./GenGenaroGenesis -f genesis.json | xargs` ../../../Genaro-Core/automatedScript/genaro.json
-
-cd ../../../Genaro-Core/automatedScript
-
-
+cd ../
+make geth
+cd automatedScript/
 
 ./bootnode.sh
 
@@ -68,6 +29,9 @@ if [ "$tmp" == "" ];then
    	exit
 fi
 
+if [ -d "./nohupNodeLog" ];then
+	rm -r nohupNodeLog/*
+fi
 
 if [ ! -d "./chainNode" ];then
 	mkdir ./chainNode
@@ -84,25 +48,26 @@ do
 	killPort=`lsof -i:$rpcport |awk '{print $2}'|grep -v PID | xargs`
 	if [ "$killPort" != "" ];then
     	kill $killPort
-	fi	
-
-
-	#初始化
-	./../build/bin/geth  init  ./genaro.json --datadir "./chainNode/chainNode$i"
+	fi
+	sleep 1	
+	if [ -d "./nohupNodeLog/nohupNode$i.out" ];then
+		rm -r ./nohupNodeLog/nohupNode$i.out
+	fi
 	
-	#key复制到keystore下
-	cp $line  ./chainNode/chainNode$i/keystore/${line##*/}
-
 	if [ "$ws" -eq "$i" ];then
+		killwsPort=`lsof -i:$wsport |awk '{print $2}'|grep -v PID | xargs`
+		if [ "$killwsPort" != "" ];then
+    		kill $killwsPort
+		fi
+		sleep 1	
 		nohup ./../build/bin/geth --ws  --wsorigins="*" --wsapi "eth,net,web3,admin,personal,miner" --datadir "./chainNode/chainNode$i" --port "$port" --wsport "$wsport" --wsaddr "0.0.0.0"  --bootnodes "$bootnode_addr" --unlock "0x${line##*--}" --password "./password"  --syncmode "full" --mine  > "./nohupNodeLog/nohupNode$i.out" &
 		let "i=$i+1"
 		let "port=$port+1"
 		continue
 	fi
-	
 
 	#启动
-	nohup ./../build/bin/geth --rpc --rpccorsdomain "*" --rpcvhosts=* --rpcapi "eth,net,web3,admin,personal,miner" --datadir "./chainNode/chainNode$i" --port "$port" --rpcport "$rpcport" --rpcaddr 0.0.0.0  --bootnodes "$bootnode_addr" --unlock "0x${line##*--}" --password "./password"  --syncmode "full" --mine  > ./nohupNodeLog/nohupNode$i.out &
+	nohup ./../build/bin/geth --rpc --rpccorsdomain "*" --rpcvhosts=* --rpcapi "eth,net,web3,admin,personal,miner" --datadir "./chainNode/chainNode$i" --port "$port" --rpcport "$rpcport" --rpcaddr 0.0.0.0  --bootnodes "$bootnode_addr" --unlock "0x${line##*--}" --password "./password"  --syncmode "full" --mine  > "./nohupNodeLog/nohupNode$i.out" &
 	let "i=$i+1"
 	let "port=$port+1"
 	let "rpcport=$rpcport+1"

@@ -251,6 +251,8 @@ func dispatchHandler(evm *EVM, caller common.Address, input []byte) error{
 		err = userPunishment(evm, s, caller)
 	case common.SpecialTxTypeBackStake.Uint64():
 		err = userBackStake(evm, caller)
+	case common.SpecialTxUnbindNode.Uint64(): //解除绑定
+		err = unbindNode(evm, s, caller)
 	default:
 		err = errors.New("undefined type of special transaction")
 	}
@@ -259,6 +261,23 @@ func dispatchHandler(evm *EVM, caller common.Address, input []byte) error{
 		log.Info("special transaction error: ", err)
 	}
 	return err
+}
+
+func unbindNode(evm *EVM, s types.SpecialTxInput, caller common.Address) error {
+	existNodes := (*evm).StateDB.GetStorageNodes(caller)
+	if err := CheckUnbindNodeTx(caller, s, existNodes); err != nil {
+		return err
+	}
+
+	var err error = nil
+	err = (*evm).StateDB.UnbindNode(caller, s.NodeId2)
+
+	if err == nil { // 倒排索引中移除关联关系
+		node2UserAccountIndexAddress := common.StakeNode2StakeAddress
+		(*evm).StateDB.UbindNode2Address(node2UserAccountIndexAddress, s.NodeId2)
+	}
+
+	return nil
 }
 
 func userBackStake(evm *EVM, caller common.Address) error {
