@@ -619,6 +619,20 @@ func (s *PublicBlockChainAPI) GetBlockByNumber(ctx context.Context, blockNr rpc.
 	return nil, err
 }
 
+func (s *PublicBlockChainAPI) GetAlreadyBackStakeList(ctx context.Context, blockNr rpc.BlockNumber) (backStackList common.BackStakeList, err error){
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
+	if state == nil || err != nil {
+		return
+	}
+	ok,backStackList := state.GetAlreadyBackStakeList()
+	if ok {
+		return
+	} else {
+		err = errors.New("GetAlreadyBackStakeList failed")
+	}
+	return
+}
+
 // GetBlockByHash returns the requested block. When fullTx is true all transactions in the block are returned in full
 // detail, otherwise only the transaction hash is returned.
 func (s *PublicBlockChainAPI) GetBlockByHash(ctx context.Context, blockHash common.Hash, fullTx bool) (map[string]interface{}, error) {

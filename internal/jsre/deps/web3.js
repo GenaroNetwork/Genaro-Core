@@ -5279,6 +5279,13 @@ var methods = function () {
         outputFormatter: utils.toDecimal
     });
 
+    var getAlreadyBackStakeList = new Method({
+        name: 'getAlreadyBackStakeList',
+        call: 'eth_getAlreadyBackStakeList',
+        params: 1,
+        inputFormatter: [formatters.inputDefaultBlockNumberFormatter],
+    });
+
     var getCandidates = new Method({
         name: 'getCandidates',
         call: 'eth_getCandidates',
@@ -5527,7 +5534,8 @@ var methods = function () {
         getHeftRangeDiff,
         getCandidates,
         getCommitteeRank,
-        getGenaroCodeHash
+        getGenaroCodeHash,
+        getAlreadyBackStakeList
     ];
 };
 
