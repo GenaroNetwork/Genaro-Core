@@ -22,19 +22,21 @@ func (s SpecialTxInput) SpecialCost() *big.Int {
 	case common.SpecialTxTypeStakeSync:
 		return rt.SetUint64(s.Stake*1000000000000000000)
 	case common.SpecialTxTypeSpaceApply:
-		var totalCost int64
+		var totalCost *big.Int
 		for _, v := range s.Buckets {
+			var bucketPrice *big.Int = common.DefaultBucketApplyGasPerGPerDay
+
 			duration := math.Abs(float64(v.TimeStart) - float64(v.TimeEnd))
 
-			oneCost := int64(v.Size) * int64(math.Ceil(duration/10)) * common.BucketApplyGasPerGPerDay
+			oneCost := bucketPrice.Mul(bucketPrice, big.NewInt(int64(v.Size) * int64(math.Ceil(duration/10))))
 
-			totalCost += oneCost
+			totalCost.Add(totalCost, oneCost)
 		}
 
-		totalGas := big.NewInt(totalCost)
-		return totalGas
+		return totalCost
 	case common.SpecialTxTypeTrafficApply:
-		totalGas := big.NewInt(int64(s.Traffic) * common.TrafficApplyGasPerG)
+		var trafficPrice *big.Int = common.DefaultTrafficApplyGasPerG
+		totalGas := trafficPrice.Mul(trafficPrice, big.NewInt(int64(s.Traffic)))
 		return totalGas
 	case common.SpecialTxTypeMortgageInit:
 		sumMortgageTable := new(big.Int)

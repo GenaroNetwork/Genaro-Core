@@ -1,6 +1,9 @@
 package common
 
-import "math/big"
+import (
+	"math/big"
+	"github.com/GenaroNetwork/Genaro-Core/common/math"
+)
 
 /*
 Some special address prepared for special transactions.
@@ -65,10 +68,12 @@ var (
 	//费用
 
 	var OneDayGes  int64 = int64(5000)
-	var BucketApplyGasPerGPerDay  int64 = int64(5000) //单位为wei
-    var TrafficApplyGasPerG	 int64 = int64(5000) //单位为wei
+
 	var OneDaySyncLogGsa  int64 = int64(5000)
-	var StakeValuePerNode   int64 = int64(1000)
+
+	var StakeValuePerNode   int64 = int64(5000) // 单位GNX
+    var DefaultTrafficApplyGasPerG, _      = math.ParseBig256("50000000000000000") // 购买流量每G需0.05个gnx
+    var DefaultBucketApplyGasPerGPerDay, _ = math.ParseBig256("500000000000000") // 购买空间每天每G需0.0005个gnx（0.015个GNX每GB每月）
 
 	var Base = uint64(10000)	// 收益计算中间值
 	var BackStackListMax = int(20)		// 最大退注长度
