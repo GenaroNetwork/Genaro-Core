@@ -47,6 +47,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"math/rand"
+	"github.com/GenaroNetwork/Genaro-Core/consensus/genaro"
 )
 
 const (
@@ -524,6 +525,49 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Add
 	}
 	b := state.GetBalance(address)
 	return b, state.Error()
+}
+
+func (s *PublicBlockChainAPI) GetLastRootStates(ctx context.Context, blockNr rpc.BlockNumber) (lastRootStates map[common.Hash]uint64, err error) {
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
+	if state == nil || err != nil {
+		return
+	}
+	lastSynState := state.GetLastSynState()
+	if lastSynState != nil {
+		lastRootStates = lastSynState.LastRootStates
+		return
+	}
+	return
+}
+
+type BlockInfo struct {
+	BlockNum uint64
+	BlockHash common.Hash
+}
+
+func (s *PublicBlockChainAPI) GetLastSynBlock(ctx context.Context, blockNr rpc.BlockNumber) (blockInfo BlockInfo, err error) {
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
+	if state == nil || err != nil {
+		return
+	}
+	lastSynState := state.GetLastSynState()
+	if lastSynState != nil {
+		blockInfo.BlockNum = lastSynState.LastSynBlockNum
+		blockInfo.BlockHash = lastSynState.LastSynBlockHash
+		return
+	}
+	return
+}
+
+// get head extra data
+func (s *PublicBlockChainAPI) GetExtra(ctx context.Context, blockNr rpc.BlockNumber) (extra *genaro.ExtraData, err error) {
+	block, err := s.b.BlockByNumber(ctx, blockNr)
+	if err != nil {
+		return
+	}
+	extra = genaro.UnmarshalToExtra(block.Header())
+	return
+
 }
 
 // GetStake returns the stake of ether for the given address in the state of the
@@ -1172,7 +1216,7 @@ func (s *PublicTransactionPoolAPI) GetTrafficTxInfo(ctx context.Context, startBl
 				var s types.SpecialTxInput
 				json.Unmarshal([]byte(tx.Input), &s)
 				r := new(rpcTrafficInfo)
-				r.NodeId = s.NodeId
+				r.NodeId = s.Address
 				r.Traffic = s.Traffic
 				r.Hash = tx.Hash
 				retArr = append(retArr, r)
@@ -1212,7 +1256,7 @@ func (s *PublicTransactionPoolAPI) GetBucketTxInfo(ctx context.Context, startBlo
 					r.TimeEnd = v.TimeEnd
 					r.Backup = v.Backup
 					r.Size = v.Size
-					r.NodeId = s.NodeId
+					r.NodeId = s.Address
 					r.Hash = tx.Hash
 					retArr = append(retArr, r)
 				}
@@ -1500,7 +1544,7 @@ func (args *SendTxArgs) toTransaction() *types.Transaction {
 			for _, v := range s.Buckets{
 				t := time.Now()
 				r := rand.New(rand.NewSource(t.Unix()))
-				bucketID := s.NodeId + strconv.FormatInt(t.Unix(),10) + strconv.Itoa(r.Int())
+				bucketID := s.Address + strconv.FormatInt(t.Unix(),10) + strconv.Itoa(r.Int())
 				bucketIdSha256 := sha256.Sum256([]byte(bucketID))
 				v.BucketId = hex.EncodeToString(bucketIdSha256[:])
 				b = append(b, v)

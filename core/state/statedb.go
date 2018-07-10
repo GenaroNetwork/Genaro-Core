@@ -948,7 +948,7 @@ func (self *StateDB)SpecialTxTypeSyncSidechainStatus(address common.Address, Spe
 	return nil,false
 }
 
-func (self *StateDB)SyncStakeNode(address common.Address,s []string) error {
+func (self *StateDB)SyncStakeNode(address common.Address,s string) error {
 
 	currentStakePrice := self.GetStakePerNodePrice()
 
@@ -961,7 +961,7 @@ func (self *StateDB)SyncStakeNode(address common.Address,s []string) error {
 }
 
 
-func (self *StateDB)SyncNode2Address(node2UserAccountIndexAddress common.Address, s []string, userAddress string) error {
+func (self *StateDB)SyncNode2Address(node2UserAccountIndexAddress common.Address, s string, userAddress string) error {
 	stateObject := self.GetOrNewStateObject(node2UserAccountIndexAddress)
 	var err error = nil
 	if stateObject != nil {
@@ -1089,10 +1089,10 @@ func (self *StateDB)UpdateTrafficApplyPrice(address common.Address, price *hexut
         return false
 }
 
-func (self *StateDB)SetLastSynBlockNum(blockNumber uint64) bool {
+func (self *StateDB)SetLastSynBlock(blockNumber uint64,blockHash common.Hash) bool {
 	stateObject := self.getStateObject(common.LastSynStateSaveAddress)
 	if stateObject != nil {
-		stateObject.SetLastSynBlockNum(blockNumber)
+		stateObject.SetLastSynBlock(blockNumber,blockHash)
 		return true
 	}
 	return false
@@ -1173,4 +1173,24 @@ func (self *StateDB)GetOneDaySyncLogGsaCost() *big.Int {
 	}
 	return common.DefaultOneDaySyncLogGsaCost
 }
+
+func (self *StateDB)UnbindNode(address common.Address, nodeId string) error {
+	stateObject := self.GetOrNewStateObject(address)
+	var err error = nil
+	if stateObject != nil {
+		err = stateObject.UnbindNode(nodeId)
+	}
+	return err
+}
+
+
+func (self *StateDB)UbindNode2Address(address common.Address, nodeId string) error{
+	stateObject := self.GetOrNewStateObject(address)
+	var err error = nil
+	if stateObject != nil {
+		err = stateObject.UbindNode2Address(nodeId)
+	}
+	return err
+}
+
 

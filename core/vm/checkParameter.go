@@ -1,12 +1,18 @@
 package vm
 
 import (
-	"github.com/GenaroNetwork/Genaro-Core/core/types"
-	"math/big"
+	"fmt"
 	"time"
-	"github.com/GenaroNetwork/Genaro-Core/common"
-	"errors"
 	"bytes"
+	"errors"
+	"math/big"
+	"crypto/sha256"
+
+	"github.com/GenaroNetwork/Genaro-Core/core/types"
+	"github.com/GenaroNetwork/Genaro-Core/common"
+	"github.com/GenaroNetwork/Genaro-Core/crypto"
+	"golang.org/x/crypto/ripemd160"
+
 )
 
 
@@ -112,7 +118,7 @@ func CheckUnlockSharedKeyParameter( s types.SpecialTxInput) error {
 }
 
 func CheckStakeTx(s types.SpecialTxInput) error {
-	adress := common.HexToAddress(s.NodeId)
+	adress := common.HexToAddress(s.Address)
 	if isSpecialAddress(adress){
 		return errors.New("param [address] can't be special address")
 	}
@@ -128,7 +134,7 @@ func CheckSyncHeftTx(caller common.Address, s types.SpecialTxInput) error {
 		return errors.New("caller address of this transaction is not invalid")
 	}
 
-	adress := common.HexToAddress(s.NodeId)
+	adress := common.HexToAddress(s.Address)
 	if isSpecialAddress(adress){
 		return errors.New("param [address] can't be special address")
 	}
@@ -146,7 +152,7 @@ func CheckApplyBucketTx(s types.SpecialTxInput) error {
 }
 
 func CheckTrafficTx(s types.SpecialTxInput) error {
-	adress := common.HexToAddress(s.NodeId)
+	adress := common.HexToAddress(s.Address)
 	if isSpecialAddress(adress){
 		return errors.New("param [address] can't be special address")
 	}
@@ -157,14 +163,41 @@ func CheckTrafficTx(s types.SpecialTxInput) error {
 	return nil
 }
 
-func CheckSyncNodeTx(stake uint64, existNodes, toAddNodes []string, stakeVlauePerNode *big.Int) error {
-	var nodeNum int
-	if toAddNodes != nil{
-		nodeNum = len(toAddNodes)
-	}else{
-		return errors.New("none nodes to synchronize")
+func CheckSyncNodeTx(caller common.Address,stake uint64, existNodes []string, s types.SpecialTxInput, stakeVlauePerNode *big.Int) error {
+
+	if len(s.NodeID) == 0 {
+		return errors.New("length of nodeId must larger then 0")
 	}
 
+	//caller和节点待绑定账户是否一致
+	if caller.String() != s.Address {
+		return errors.New("two address not equal")
+	}
+
+	//校验节点是否已经绑定过
+	for _, existNode := range existNodes {
+		if s.NodeID == existNode {
+			return errors.New("the node has been bound to the account")
+		}
+	}
+
+	// 验证节点绑定签名
+	// 拼接message
+	msg := s.NodeID + s.Sign
+	recoveredPub, err := crypto.Ecrecover([]byte(msg), []byte(s.Sign))
+	if err != nil {
+		errors.New("ECRecover error when valid sign")
+	}
+
+	//get publickey
+	pubKey := crypto.CompressPubkey(crypto.ToECDSAPub(recoveredPub))
+
+	genNodeID := generateNodeId(pubKey)
+	if genNodeID != s.NodeID {
+		return errors.New("sign valid error")
+	}
+
+	var nodeNum int = 1
 	if existNodes != nil {
 		nodeNum += len(existNodes)
 	}
@@ -178,8 +211,18 @@ func CheckSyncNodeTx(stake uint64, existNodes, toAddNodes []string, stakeVlauePe
 	return nil
 }
 
+
+func generateNodeId(b []byte) string {
+	sha256byte := sha256.Sum256(b)
+	ripemder := ripemd160.New()
+	ripemder.Write(sha256byte[:])
+	hashBytes := ripemder.Sum(nil)
+	nodeId := fmt.Sprintf("%x", hashBytes)
+	return nodeId
+}
+
 func CheckPunishmentTx(caller common.Address,s types.SpecialTxInput) error {
-	adress := common.HexToAddress(s.NodeId)
+	adress := common.HexToAddress(s.Address)
 	if isSpecialAddress(adress){
 		return errors.New("param [address] can't be special address")
 	}
@@ -191,14 +234,14 @@ func CheckPunishmentTx(caller common.Address,s types.SpecialTxInput) error {
 }
 
 func CheckSynStateTx(caller common.Address) error {
-	if caller !=  common.SpecialSyncAddress {
+	if caller !=  common.OfficialAddress {
 		return errors.New("caller address of this transaction is not invalid")
 	}
 	return nil
 }
 
 func CheckSyncFileSharePublicKeyTx(s types.SpecialTxInput) error {
-	adress := common.HexToAddress(s.NodeId)
+	adress := common.HexToAddress(s.Address)
 	if isSpecialAddress(adress){
 		return errors.New("param [address] can't be special address")
 	}
@@ -214,4 +257,21 @@ func CheckPriceRegulation(caller common.Address) error {
 		return errors.New("caller address of this transaction is not invalid")
 	}
 	return nil
+}
+
+func CheckUnbindNodeTx(caller common.Address,s types.SpecialTxInput, existNodes []string) error{
+	if existNodes == nil {
+		return errors.New("none node of this account need to unbind")
+	}
+
+	if s.NodeID == "" {
+		return errors.New("nodeId is null")
+	}
+
+	for _, v := range existNodes{
+		if v == s.NodeID {
+			return nil
+		}
+	}
+	return errors.New("this node does not belong to this account")
 }

@@ -114,6 +114,23 @@ type Account struct {
 
 type Candidates []common.Address
 
+func (self *Candidates)isExist(addr common.Address) bool{
+	for _,addrIn := range *self {
+		if bytes.Compare(addrIn.Bytes(),addr.Bytes()) == 0 {
+			return true
+		}
+	}
+	return false
+}
+
+//func (self *Candidates)DelCandidate(addr common.Address) {
+//	for i,addrIn := range *self {
+//		if bytes.Compare(addrIn.Bytes(),addr.Bytes()) == 0 {
+//			(*self) = append(*self)[:i],(*self)[i:])
+//		}
+//	}
+//}
+
 type CandidateInfo struct {
 	Signer       common.Address // peer address
 	Heft uint64         // the sentinel of the peer
@@ -622,8 +639,28 @@ func (self *stateObject) AddCandidate(candidate common.Address) {
 	}else {
 		json.Unmarshal(self.data.CodeHash, &candidates)
 	}
-	candidates = append(candidates,candidate)
+	if !candidates.isExist(candidate) {
+		candidates = append(candidates,candidate)
+		b, _ := json.Marshal(candidates)
+		self.code = nil
+		self.data.CodeHash = b[:]
+		self.dirtyCode = true
+		if self.onDirty != nil {
+			self.onDirty(self.Address())
+			self.onDirty = nil
+		}
+	}
+}
 
+func (self *stateObject) DelCandidate(candidate common.Address) {
+	var candidates Candidates
+	if self.data.CodeHash == nil{
+		candidates = *new(Candidates)
+	}else {
+		json.Unmarshal(self.data.CodeHash, &candidates)
+	}
+
+	candidates = append(candidates,candidate)
 	b, _ := json.Marshal(candidates)
 	self.code = nil
 	self.data.CodeHash = b[:]
@@ -632,6 +669,7 @@ func (self *stateObject) AddCandidate(candidate common.Address) {
 		self.onDirty(self.Address())
 		self.onDirty = nil
 	}
+
 }
 
 func (self *stateObject)GetCandidates() (Candidates){
@@ -963,16 +1001,16 @@ func (self *stateObject) TxLogByDataVersionRead(fileID,dataVersion string) (map[
 	return nil,nil
 }
 
-func (self *stateObject)SyncStakeNode(s []string, StakeValuePerNode *big.Int) error {
+func (self *stateObject)SyncStakeNode(s string, StakeValuePerNode *big.Int) error {
 	var err error
 	var genaroData types.GenaroData
 	if self.data.CodeHash == nil{ // 用户数据为空，表示用户未进行stake操作，不能同步节点到链上
 		err = ErrSyncNode
 	}else {
 		json.Unmarshal(self.data.CodeHash, &genaroData)
-		totalNodeNumber := len(s)
+		var totalNodeNumber int = 1
 		if genaroData.Node != nil {
-			totalNodeNumber += len(genaroData.Node)
+			totalNodeNumber = len(genaroData.Node) + 1
 		}
 		needStakeVale := new(big.Int)
 		needStakeVale.Add(big.NewInt(int64(totalNodeNumber)),StakeValuePerNode)
@@ -980,7 +1018,7 @@ func (self *stateObject)SyncStakeNode(s []string, StakeValuePerNode *big.Int) er
 		if needStakeVale.Cmp(currentStake) != 1 {
 			err = ErrSyncNode
 		}else {
-			genaroData.Node = append(genaroData.Node, s...)
+			genaroData.Node = append(genaroData.Node, s)
 			b, _ := json.Marshal(genaroData)
 			self.code = nil
 			self.data.CodeHash = b[:]
@@ -994,17 +1032,13 @@ func (self *stateObject)SyncStakeNode(s []string, StakeValuePerNode *big.Int) er
 	return err
 }
 
-func (self *stateObject)SyncNode2Address(s []string, address string) error {
+func (self *stateObject)SyncNode2Address(s string, address string) error {
 	d := make(map[string]string)
-	if self.data.CodeHash != nil {
-		for _, v := range s {
-			d[v] = address
-		}
+	if self.data.CodeHash == nil {
+			d[s] = address
 	}else{
 		json.Unmarshal(self.data.CodeHash, &d)
-		for _, v := range s {
-			d[v] = address
-		}
+		d[s] = address
 	}
 	b, _ := json.Marshal(d)
 	self.code = nil
@@ -1202,11 +1236,14 @@ func (self *stateObject)UpdateTrafficApplyPrice(price *hexutil.Big) {
 }
 
 func (self *stateObject)AddLastRootState(statehash common.Hash, blockNumber uint64) {
-	var lastSynState *types.LastSynState
+	var lastSynState types.LastSynState
 	if self.data.CodeHash == nil{
-		lastSynState = new(types.LastSynState)
+		lastSynState = types.LastSynState{
+			LastRootStates:	make(map[common.Hash]uint64),
+			LastSynBlockNum: 0,
+		}
 	}else {
-		json.Unmarshal(self.data.CodeHash, lastSynState)
+		json.Unmarshal(self.data.CodeHash, &lastSynState)
 	}
 
 	lastSynState.AddLastSynState(statehash,blockNumber)
@@ -1253,15 +1290,19 @@ func (self *stateObject)UpdateStakePerNodePrice(price *hexutil.Big) {
         }
 }
 
-func (self *stateObject)SetLastSynBlockNum(blockNumber uint64) {
-	var lastsynState *types.LastSynState
+func (self *stateObject)SetLastSynBlock(blockNumber uint64,blockHash common.Hash) {
+	var lastsynState types.LastSynState
 	if self.data.CodeHash == nil{
-		lastsynState = new(types.LastSynState)
+		lastsynState = types.LastSynState{
+			LastRootStates:	make(map[common.Hash]uint64),
+			LastSynBlockNum: 0,
+		}
 	}else {
-		json.Unmarshal(self.data.CodeHash, lastsynState)
+		json.Unmarshal(self.data.CodeHash, &lastsynState)
 	}
 
 	lastsynState.LastSynBlockNum = blockNumber
+	lastsynState.LastSynBlockHash = blockHash
 
 	b, _ := json.Marshal(lastsynState)
 	self.code = nil
@@ -1364,6 +1405,53 @@ func (self *stateObject)GetLastSynState() *types.LastSynState{
 		var lastSynState types.LastSynState
 		json.Unmarshal(self.data.CodeHash, &lastSynState)
 		return &lastSynState
+	}
+	return nil
+}
+
+func (self *stateObject)UnbindNode(nodeId string) error{
+	var err error
+	var genaroData types.GenaroData
+	if self.data.CodeHash == nil{
+		err = errors.New("no node of this account")
+	}else {
+		json.Unmarshal(self.data.CodeHash, &genaroData)
+
+		var a []string
+		for k, v := range genaroData.Node {
+			if v == nodeId {
+				a = append(genaroData.Node[:k], genaroData.Node[k+1:]...)
+			}
+		}
+		genaroData.Node = a
+		b, _ := json.Marshal(genaroData)
+		self.code = nil
+		self.data.CodeHash = b[:]
+		self.dirtyCode = true
+		if self.onDirty != nil {
+			self.onDirty(self.Address())
+			self.onDirty = nil
+		}
+
+	}
+	return err
+}
+
+func (self *stateObject)UbindNode2Address(nodeId string) error{
+	d := make(map[string]string)
+	if self.data.CodeHash == nil {
+		return nil
+	}else{
+		json.Unmarshal(self.data.CodeHash, &d)
+		delete(d, nodeId)
+	}
+	b, _ := json.Marshal(d)
+	self.code = nil
+	self.data.CodeHash = b[:]
+	self.dirtyCode = true
+	if self.onDirty != nil {
+		self.onDirty(self.Address())
+		self.onDirty = nil
 	}
 	return nil
 }
