@@ -29,6 +29,7 @@ import (
 	"github.com/GenaroNetwork/Genaro-Core/params"
 	"github.com/GenaroNetwork/Genaro-Core/core/types"
 	"github.com/GenaroNetwork/Genaro-Core/log"
+	"math"
 )
 
 // emptyCodeHash is used by create to ensure deployment is disallowed to already
@@ -409,7 +410,17 @@ func specialTxTypeMortgageInit(evm *EVM, s types.SpecialTxInput,caller common.Ad
 func updateStorageProperties(evm *EVM, s types.SpecialTxInput,caller common.Address) error {
 	adress := common.HexToAddress(s.NodeId)
 
-	totalGas := s.SpecialCost()
+	var totalGas *big.Int = big.NewInt(0)
+	for _, v := range s.Buckets {
+		var bucketPrice = new(big.Int).Set(common.DefaultBucketApplyGasPerGPerDay)
+		duration := math.Ceil(math.Abs(float64(v.TimeStart) - float64(v.TimeEnd))/86400)
+		//log.Info(fmt.Sprintf("vm duration: %f",duration))
+		oneCost := new(big.Int).Mul(bucketPrice, big.NewInt(int64(v.Size) * int64(duration)))
+		//log.Info(fmt.Sprintf("vm oneCost: %s",oneCost.String()))
+
+		totalGas = new(big.Int).Add(totalGas, oneCost)
+	}
+
 
 	// Fail if we're trying to use more than the available balance
 	if !evm.Context.CanTransfer(evm.StateDB, caller, totalGas) {
@@ -452,7 +463,9 @@ func updateHeft(statedb *StateDB, s types.SpecialTxInput, blockNumber uint64) er
 func updateTraffic(evm *EVM, s types.SpecialTxInput,caller common.Address) error {
 	adress := common.HexToAddress(s.NodeId)
 
-	totalGas := s.SpecialCost()
+	var trafficPrice *big.Int = new(big.Int).Set(common.DefaultTrafficApplyGasPerG)
+	totalGas := new(big.Int).Mul(trafficPrice, big.NewInt(int64(s.Traffic)))
+
 
 	// Fail if we're trying to use more than the available balance
 	if !evm.Context.CanTransfer(evm.StateDB, caller, totalGas) {
@@ -469,7 +482,6 @@ func updateTraffic(evm *EVM, s types.SpecialTxInput,caller common.Address) error
 
 	return nil
 }
-
 
 func updateStake(evm *EVM, s types.SpecialTxInput, caller common.Address) error {
 	amount := new(big.Int)

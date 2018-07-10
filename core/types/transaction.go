@@ -262,15 +262,18 @@ func (tx *Transaction) Cost() *big.Int {
 // SpecialCost returns total cost for special transaction
 // if current transaction is normal transaction, return zero.
 func (tx *Transaction) SpecialCost() *big.Int {
+	var ret = big.NewInt(0)
 	if tx.Data() == nil {
-		return big.NewInt(0)
+		return ret
 	}
 	var s SpecialTxInput
 	err := json.Unmarshal(tx.Data(), &s)
-	if err != nil {
-		return s.SpecialCost()
+	if err == nil {
+		cost := s.SpecialCost()
+		ret.Set(&cost)
+		return ret
 	}
-	return big.NewInt(0)
+	return ret
 }
 
 func (tx *Transaction) RawSignatureValues() (*big.Int, *big.Int, *big.Int) {
