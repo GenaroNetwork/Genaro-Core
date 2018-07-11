@@ -484,10 +484,11 @@ func updateTraffic(evm *EVM, s types.SpecialTxInput,caller common.Address) error
 }
 
 func updateStake(evm *EVM, s types.SpecialTxInput, caller common.Address) error {
-	amount := new(big.Int)
-	// the unit of stake is GNX， one stake means one GNX
-	amount.SetUint64(s.Stake*1000000000000000000)
 
+	// the unit of stake is GNX， one stake means one GNX
+	amount := new(big.Int).Mul(new(big.Int).SetUint64(s.Stake), new(big.Int).SetUint64(1000000000000000000))
+
+	//log.Info(fmt.Sprintf("stake cost %s",amount.String()))
 	// judge if there is enough balance to stake（balance must larger than stake value)
 	if !evm.Context.CanTransfer(evm.StateDB, caller, amount) {
 		return ErrInsufficientBalance

@@ -19,8 +19,8 @@ type SpecialTxInput struct {
 func (s SpecialTxInput) SpecialCost() big.Int {
 	switch s.Type.ToInt().Uint64() {
 	case common.SpecialTxTypeStakeSync.Uint64():
-		rt := big.NewInt(0)
-		return *rt.SetUint64(s.Stake*1000000000000000000)
+		rt := new(big.Int).Mul(new(big.Int).SetUint64(s.Stake), new(big.Int).SetUint64(1000000000000000000))
+		return *rt
 	case common.SpecialTxTypeSpaceApply.Uint64():
 		var totalCost *big.Int = big.NewInt(0)
 		for _, v := range s.Buckets {
