@@ -594,8 +594,8 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 
 	currentPrice := pool.currentState.GetGenaroPrice()
 
-	totalCost := new(big.Int)
-	totalCost.Add(tx.Cost(), tx.SpecialCost(currentPrice))
+	totalCost := new(big.Int).Add(tx.Cost(), tx.SpecialCost(currentPrice))
+	log.Info(fmt.Sprintf("total cost:%s", totalCost.String()))
 	if pool.currentState.GetBalance(from).Cmp(totalCost) < 0 {
 		return ErrInsufficientFundsForSpecialTx
 	}
@@ -623,7 +623,7 @@ func (pool *TxPool)dispatchHandlerValidateTx(input []byte, caller common.Address
 	}
 	switch s.Type.ToInt().Uint64(){
 	case common.SpecialTxTypeStakeSync.Uint64(): // 同步stake
-		return vm.CheckStakeTx(s)
+		return vm.CheckStakeTx(s, pool.currentState)
 	case common.SpecialTxTypeHeftSync.Uint64(): // 同步heft
 		return vm.CheckSyncHeftTx(caller, s)
 	case common.SpecialTxTypeSpaceApply.Uint64(): // 申请存储空间
@@ -635,10 +635,7 @@ func (pool *TxPool)dispatchHandlerValidateTx(input []byte, caller common.Address
 	case common.SpecialTxTypeTrafficApply.Uint64(): //用户申购流量
 		return vm.CheckTrafficTx(s)
 	case common.SpecialTxTypeSyncNode.Uint64(): //用户stake后同步节点Id
-		callerStake, _ := pool.currentState.GetStake(caller)
-		existNodes := pool.currentState.GetStorageNodes(caller)
-		currentStakePrice := pool.currentState.GetStakePerNodePrice()
-		return vm.CheckSyncNodeTx(caller, callerStake, existNodes, s, currentStakePrice)
+		return vm.CheckSyncNodeTx(caller, s, pool.currentState)
 	case common.SynchronizeShareKey.Uint64():
 		return vm.CheckSynchronizeShareKeyParameter(s)
 	case common.SpecialTxTypeSyncFielSharePublicKey.Uint64(): // 用户同步自己文件分享的publicKey到链上
@@ -647,13 +644,21 @@ func (pool *TxPool)dispatchHandlerValidateTx(input []byte, caller common.Address
 		return vm.CheckUnlockSharedKeyParameter(s)
 	case common.SpecialTxTypePunishment.Uint64(): // 用户恶意行为后的惩罚措施
 		return vm.CheckPunishmentTx(caller,s)
+	case common.SpecialTxTypeBackStake.Uint64():
+		return vm.CheckBackStakeTx(caller, pool.currentState)
 	case common.SpecialTxTypePriceRegulation.Uint64(): //价格调整
-		return vm.CheckPriceRegulation(caller)
+		return vm.CheckPriceRegulation(caller, s)
 	case common.SpecialTxSynState.Uint64():
 		return vm.CheckSynStateTx(caller)
 	case common.SpecialTxUnbindNode.Uint64(): //解除绑定
 		existNodes := pool.currentState.GetStorageNodes(caller)
 		return vm.CheckUnbindNodeTx(caller, s, existNodes)
+	case common.SpecialTxAccountBinding.Uint64():	//账号绑定
+		return vm.CheckAccountBindingTx(caller, s, pool.currentState)
+	case common.SpecialTxAccountCancelBinding.Uint64(): // 账号解除绑定
+		_,err := vm.CheckAccountCancelBindingTx(caller, s, pool.currentState)
+		return err
+
 	}
 	return errors.New("undefined type of special transaction")
 }

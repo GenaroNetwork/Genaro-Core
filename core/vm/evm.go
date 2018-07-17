@@ -29,6 +29,7 @@ import (
 	"github.com/GenaroNetwork/Genaro-Core/params"
 	"github.com/GenaroNetwork/Genaro-Core/core/types"
 	"github.com/GenaroNetwork/Genaro-Core/log"
+	"fmt"
 )
 
 // emptyCodeHash is used by create to ensure deployment is disallowed to already
@@ -248,7 +249,7 @@ func dispatchHandler(evm *EVM, caller common.Address, input []byte) error{
 		err = UnlockSharedKey(evm, s, caller)
 	case common.SpecialTxTypePunishment.Uint64(): // 用户恶意行为后的惩罚措施
 		err = userPunishment(evm, s, caller)
-	case common.SpecialTxTypeBackStake.Uint64():
+	case common.SpecialTxTypeBackStake.Uint64():	// 退注
 		err = userBackStake(evm, caller)
 	case common.SpecialTxTypePriceRegulation.Uint64(): //价格调整
 		err = genaroPriceRegulation(evm, s, caller)
@@ -256,6 +257,10 @@ func dispatchHandler(evm *EVM, caller common.Address, input []byte) error{
 		err = SynState(evm, s, caller)
 	case common.SpecialTxUnbindNode.Uint64(): //解除绑定
 		err = unbindNode(evm, s, caller)
+	case common.SpecialTxAccountBinding.Uint64():	// 账号绑定
+		err = accountBinding(evm, s, caller)
+	case common.SpecialTxAccountCancelBinding.Uint64(): // 账号解除绑定
+		err = accountCancelBinding(evm, s, caller)
 	default:
 		err = errors.New("undefined type of special transaction")
 	}
@@ -283,12 +288,66 @@ func unbindNode(evm *EVM, s types.SpecialTxInput, caller common.Address) error {
 	return nil
 }
 
-func genaroPriceRegulation(evm *EVM, s types.SpecialTxInput, caller common.Address) error{
-	if err := CheckPriceRegulation(caller); err != nil {
+// 账号之间建立绑定，由官方账号完成绑定连接
+func accountBinding(evm *EVM, s types.SpecialTxInput, caller common.Address) error {
+	err := CheckAccountBindingTx(caller, s,(*evm).StateDB)
+	if err != nil {
 		return err
 	}
 
-	var flag = false
+	// 主账号
+	mainAddr := common.HexToAddress(s.Address)
+	// 子账号
+	subAddr := common.HexToAddress(s.Message)
+	// 账号绑定
+	if !(*evm).StateDB.UpdateAccountBinding(mainAddr,subAddr) {
+		return errors.New("binding failed")
+	}
+	// 将子账号从候选者列表中去除
+	if !(*evm).StateDB.DelCandidate(subAddr) {
+		return errors.New("DelCandidate failed")
+	}
+
+	return nil
+}
+
+// 解除账号绑定
+func accountCancelBinding(evm *EVM, s types.SpecialTxInput, caller common.Address) error {
+	t,err := CheckAccountCancelBindingTx(caller, s,(*evm).StateDB)
+	if err != nil {
+		return err
+	}
+
+	// 判断账号处理类型
+	switch t{
+	case 1:
+		subAccounts := (*evm).StateDB.DelMainAccountBinding(caller)
+		// 恢复候选者身份
+		for _,subAccount := range subAccounts {
+			(*evm).StateDB.AddCandidate(subAccount)
+		}
+	case 2:
+		ok := (*evm).StateDB.DelSubAccountBinding(caller)
+		if ok {
+			(*evm).StateDB.AddCandidate(caller)
+		}
+	case 3:
+		subAddr := common.HexToAddress(s.Address)
+		ok := (*evm).StateDB.DelSubAccountBinding(subAddr)
+		if ok {
+			(*evm).StateDB.AddCandidate(subAddr)
+		}
+	default:
+		return errors.New("Account Cancel Binding failed")
+	}
+	return nil
+}
+
+func genaroPriceRegulation(evm *EVM, s types.SpecialTxInput, caller common.Address) error{
+	if err := CheckPriceRegulation(caller, s); err != nil {
+		return err
+	}
+
 	if caller !=  common.GenaroPriceAddress {
 		return errors.New("caller address of this transaction is not invalid")
 	}
@@ -297,45 +356,40 @@ func genaroPriceRegulation(evm *EVM, s types.SpecialTxInput, caller common.Addre
 		if ok := (*evm).StateDB.UpdateStakePerNodePrice(caller, s.StakeValuePerNode); !ok {
 			return errors.New("update the price of stakePerNode fail")
 		}
-		flag = true
 	}
 
 	if s.BucketApplyGasPerGPerDay != nil {
 		if ok := (*evm).StateDB.UpdateBucketApplyPrice(caller, s.BucketApplyGasPerGPerDay); !ok {
 			return errors.New("update the price of bucketApply fail")
 		}
-		flag = true
 	}
 
 	if s.TrafficApplyGasPerG != nil {
 		if ok := (*evm).StateDB.UpdateTrafficApplyPrice(caller, s.TrafficApplyGasPerG); !ok {
 			return errors.New("update the price of trafficApply fail")
 		}
-		flag = true
 	}
 
 	if s.OneDayMortgageGes != nil {
 		if ok := (*evm).StateDB.UpdateOneDayGesCost(caller, s.OneDayMortgageGes); !ok {
 			return errors.New("update the price of OneDayGesCost fail")
 		}
-		flag = true
 	}
 
 	if s.OneDaySyncLogGsaCost != nil {
 		if ok := (*evm).StateDB.UpdateOneDaySyncLogGsaCost(caller, s.OneDaySyncLogGsaCost); !ok {
 			return errors.New("update the price of OneDaySyncLogGsaCost fail")
 		}
-		flag = true
-	}
-
-	if !flag {
-		return errors.New("none parice to update")
 	}
 
 	return nil
 }
 
 func SynState(evm *EVM, s types.SpecialTxInput,caller common.Address) error {
+	err := CheckSynStateTx(caller)
+	if err != nil {
+		return err
+	}
 	lastSynState := (*evm).StateDB.GetLastSynState()
 	blockHash := common.HexToHash(s.Message)
 	blockNum,ok := lastSynState.LastRootStates[blockHash]
@@ -348,20 +402,22 @@ func SynState(evm *EVM, s types.SpecialTxInput,caller common.Address) error {
 }
 
 func userBackStake(evm *EVM, caller common.Address) error {
-	ok,backStakeList := (*evm).StateDB.GetAlreadyBackStakeList()
-	if !ok {
-		return errors.New("userBackStake fail")
+	err := CheckBackStakeTx(caller, (*evm).StateDB)
+	if err != nil {
+		return err
 	}
-	if len(backStakeList) > common.BackStackListMax {
-		return errors.New("BackStackList too long")
-	}
+
 	var backStake = common.AlreadyBackStake{
 		Addr: caller,
 		BackBlockNumber:evm.BlockNumber.Uint64(),
 	}
-	ok = (*evm).StateDB.AddAlreadyBackStack(backStake)
+	ok := (*evm).StateDB.AddAlreadyBackStack(backStake)
 	if !ok {
 		return errors.New("userBackStake fail")
+	}
+	ok = (*evm).StateDB.DelCandidate(caller)
+	if !ok {
+		return errors.New("DelCandidate fail")
 	}
 	return nil
 }
@@ -374,13 +430,12 @@ func userPunishment(evm *EVM, s types.SpecialTxInput,caller common.Address) erro
 	adress := common.HexToAddress(s.Address)
 	var actualPunishment uint64
 	var ok bool
-	// 根据nodeid扣除对应用户的stake
+	// 根据address扣除对应用户的stake
 	if ok, actualPunishment = (*evm).StateDB.DeleteStake(adress, s.Stake, evm.BlockNumber.Uint64()); !ok {
 		return errors.New("delete user's stake fail")
 	}
-	amount := new(big.Int)
-	amount.SetUint64(actualPunishment*1000000000000000000)
-	//将实际扣除的钱转到官方账号中
+	amount := new(big.Int).Mul(common.BaseCompany, new(big.Int).SetUint64(actualPunishment))
+	// 将实际扣除的钱转到官方账号中
 	(*evm).StateDB.AddBalance(common.OfficialAddress, amount)
 	return nil
 }
@@ -420,11 +475,7 @@ func updateFileShareSecretKey(evm *EVM, s types.SpecialTxInput,caller common.Add
 
 func updateStakeNode(evm *EVM, s types.SpecialTxInput,caller common.Address) error {
 
-	existNodes := (*evm).StateDB.GetStorageNodes(caller)
-	currentStake, _:= (*evm).StateDB.GetStake(caller)
-	priceTable := (*evm).StateDB.GetStakePerNodePrice()
-
-	if err := CheckSyncNodeTx(caller, currentStake, existNodes, s, priceTable); nil != err {
+	if err := CheckSyncNodeTx(caller, s, (*evm).StateDB); nil != err {
 		return err
 	}
 
@@ -492,7 +543,9 @@ func updateStorageProperties(evm *EVM, s types.SpecialTxInput,caller common.Addr
 	adress := common.HexToAddress(s.Address)
 
 	currentPrice := (*evm).StateDB.GetGenaroPrice()
-	totalGas := s.SpecialCost(currentPrice)
+	currentCost := s.SpecialCost(currentPrice)
+	totalGas := new(big.Int).Set(&currentCost)
+	log.Info(fmt.Sprintf("evm bucketApply cost:%s", totalGas.String()))
 
 	// Fail if we're trying to use more than the available balance
 	if !evm.Context.CanTransfer(evm.StateDB, caller, totalGas) {
@@ -545,7 +598,9 @@ func updateTraffic(evm *EVM, s types.SpecialTxInput,caller common.Address) error
 	adress := common.HexToAddress(s.Address)
 
 	currentPrice := (*evm).StateDB.GetGenaroPrice()
-	totalGas := s.SpecialCost(currentPrice)
+	currentCost := s.SpecialCost(currentPrice)
+	totalGas := new(big.Int).Set(&currentCost)
+	log.Info(fmt.Sprintf("evm trafficApply cost:%s", totalGas.String()))
 
 	// Fail if we're trying to use more than the available balance
 	if !evm.Context.CanTransfer(evm.StateDB, caller, totalGas) {
@@ -563,15 +618,14 @@ func updateTraffic(evm *EVM, s types.SpecialTxInput,caller common.Address) error
 	return nil
 }
 
-
 func updateStake(evm *EVM, s types.SpecialTxInput, caller common.Address) error {
-	if err := CheckStakeTx(s); err != nil {
+	if err := CheckStakeTx(s,evm.StateDB); err != nil {
 		return err
 	}
 
-	amount := new(big.Int)
 	// the unit of stake is GNX， one stake means one GNX
-	amount.SetUint64(s.Stake*1000000000000000000)
+	currentCost := s.SpecialCost(nil)
+	amount := new(big.Int).Set(&currentCost)
 
 	// judge if there is enough balance to stake（balance must larger than stake value)
 	if !evm.Context.CanTransfer(evm.StateDB, caller, amount) {

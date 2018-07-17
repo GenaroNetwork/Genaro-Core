@@ -123,13 +123,13 @@ func (self *Candidates)isExist(addr common.Address) bool{
 	return false
 }
 
-//func (self *Candidates)DelCandidate(addr common.Address) {
-//	for i,addrIn := range *self {
-//		if bytes.Compare(addrIn.Bytes(),addr.Bytes()) == 0 {
-//			(*self) = append(*self)[:i],(*self)[i:])
-//		}
-//	}
-//}
+func (self *Candidates)DelCandidate(addr common.Address) {
+	for i,addrIn := range *self {
+		if bytes.Compare(addrIn.Bytes(),addr.Bytes()) == 0 {
+			(*self) = append((*self)[:i],(*self)[i+1:]...)
+		}
+	}
+}
 
 type CandidateInfo struct {
 	Signer       common.Address // peer address
@@ -156,12 +156,19 @@ func (c CandidateInfos) Less(i, j int) bool {
 }
 
 func (c CandidateInfos) Apply() {
+	totleHeft := uint64(0)
+	totleStake := uint64(0)
+	for _, candidate := range c{
+		totleHeft += candidate.Heft
+		totleStake += candidate.Stake
+	}
 	//TODO define how to get point
 	for i, candidate := range c{
-		c[i].Point = candidate.Stake + candidate.Heft
+		c[i].Point = candidate.Stake*common.Base/totleStake + candidate.Heft*common.Base/totleHeft
 	}
 }
 
+// 全员排名，无限制长度
 func Rank(candidateInfos CandidateInfos) ([]common.Address, []uint64){
 	candidateInfos.Apply()
 	sort.Sort(sort.Reverse(candidateInfos))
@@ -178,7 +185,39 @@ func Rank(candidateInfos CandidateInfos) ([]common.Address, []uint64){
 		committeeRank[i] = c.Signer
 		proportion[i] = c.Stake*uint64(common.Base)/total
 	}
+	return committeeRank, proportion
+}
 
+// 限制排名的长度后，进行排名
+func RankWithLenth(candidateInfos CandidateInfos, lenth int) ([]common.Address, []uint64){
+	candidateInfos.Apply()
+	// 除去低于stake最小限制的账号
+	for i:=0;i<len(candidateInfos);i++ {
+		if candidateInfos[i].Stake < common.CommitteeMinStake {
+			candidateInfos = append(candidateInfos[:i],candidateInfos[i+1:]...)
+			i--
+		}
+	}
+
+	sort.Sort(sort.Reverse(candidateInfos))
+	rankLenth := lenth
+	if len(candidateInfos) < rankLenth {
+		rankLenth = len(candidateInfos)
+	}
+	committeeRank := make([]common.Address, rankLenth)
+	proportion := make([]uint64, rankLenth)
+	total := uint64(0)
+
+	for i:=0;i<rankLenth;i++ {
+		total += candidateInfos[i].Stake
+	}
+	if total == 0 {
+		return committeeRank, proportion
+	}
+	for i:=0;i<rankLenth;i++ {
+		committeeRank[i] =  candidateInfos[i].Signer
+		proportion[i] = candidateInfos[i].Stake*uint64(common.Base)/total
+	}
 	return committeeRank, proportion
 }
 
@@ -652,6 +691,18 @@ func (self *stateObject) AddCandidate(candidate common.Address) {
 	}
 }
 
+// 判断候选者是否存在
+func (self *stateObject) IsCandidateExist(candidate common.Address) bool{
+	var candidates Candidates
+	if self.data.CodeHash == nil{
+		candidates = *new(Candidates)
+	}else {
+		json.Unmarshal(self.data.CodeHash, &candidates)
+	}
+
+	return candidates.isExist(candidate)
+}
+
 func (self *stateObject) DelCandidate(candidate common.Address) {
 	var candidates Candidates
 	if self.data.CodeHash == nil{
@@ -660,7 +711,7 @@ func (self *stateObject) DelCandidate(candidate common.Address) {
 		json.Unmarshal(self.data.CodeHash, &candidates)
 	}
 
-	candidates = append(candidates,candidate)
+	candidates.DelCandidate(candidate)
 	b, _ := json.Marshal(candidates)
 	self.code = nil
 	self.data.CodeHash = b[:]
@@ -687,16 +738,18 @@ func (self *stateObject) AddAlreadyBackStack(backStake common.AlreadyBackStake) 
 		backStakes = *new(common.BackStakeList)
 	}else {
 		json.Unmarshal(self.data.CodeHash, &backStakes)
-		backStakes = append(backStakes,backStake)
 	}
+	if !backStakes.IsExist(backStake){
+		backStakes = append(backStakes,backStake)
 
-	b, _ := json.Marshal(backStakes)
-	self.code = nil
-	self.data.CodeHash = b[:]
-	self.dirtyCode = true
-	if self.onDirty != nil {
-		self.onDirty(self.Address())
-		self.onDirty = nil
+		b, _ := json.Marshal(backStakes)
+		self.code = nil
+		self.data.CodeHash = b[:]
+		self.dirtyCode = true
+		if self.onDirty != nil {
+			self.onDirty(self.Address())
+			self.onDirty = nil
+		}
 	}
 }
 
@@ -1001,33 +1054,23 @@ func (self *stateObject) TxLogByDataVersionRead(fileID,dataVersion string) (map[
 	return nil,nil
 }
 
-func (self *stateObject)SyncStakeNode(s string, StakeValuePerNode *big.Int) error {
+func (self *stateObject)SyncStakeNode(s string) error {
 	var err error
 	var genaroData types.GenaroData
 	if self.data.CodeHash == nil{ // 用户数据为空，表示用户未进行stake操作，不能同步节点到链上
 		err = ErrSyncNode
 	}else {
 		json.Unmarshal(self.data.CodeHash, &genaroData)
-		var totalNodeNumber int = 1
-		if genaroData.Node != nil {
-			totalNodeNumber = len(genaroData.Node) + 1
+		genaroData.Node = append(genaroData.Node, s)
+		b, _ := json.Marshal(genaroData)
+		self.code = nil
+		self.data.CodeHash = b[:]
+		self.dirtyCode = true
+		if self.onDirty != nil {
+			self.onDirty(self.Address())
+			self.onDirty = nil
 		}
-		needStakeVale := new(big.Int)
-		needStakeVale.Add(big.NewInt(int64(totalNodeNumber)),StakeValuePerNode)
-		currentStake := big.NewInt(int64(genaroData.Stake * 1000000000000000000))
-		if needStakeVale.Cmp(currentStake) != 1 {
-			err = ErrSyncNode
-		}else {
-			genaroData.Node = append(genaroData.Node, s)
-			b, _ := json.Marshal(genaroData)
-			self.code = nil
-			self.data.CodeHash = b[:]
-			self.dirtyCode = true
-			if self.onDirty != nil {
-				self.onDirty(self.Address())
-				self.onDirty = nil
-			}
-		}
+
 	}
 	return err
 }
@@ -1226,15 +1269,16 @@ func (self *stateObject)UpdateTrafficApplyPrice(price *hexutil.Big) {
 	}
 
 	b, _ := json.Marshal(genaroPrice)
-        self.code = nil
-        self.data.CodeHash = b[:]
-        self.dirtyCode = true
-        if self.onDirty != nil {
-                self.onDirty(self.Address())
-                self.onDirty = nil
-        }
+	self.code = nil
+	self.data.CodeHash = b[:]
+	self.dirtyCode = true
+	if self.onDirty != nil {
+			self.onDirty(self.Address())
+			self.onDirty = nil
+	}
 }
 
+// 添加最近块的信息
 func (self *stateObject)AddLastRootState(statehash common.Hash, blockNumber uint64) {
 	var lastSynState types.LastSynState
 	if self.data.CodeHash == nil{
@@ -1256,6 +1300,176 @@ func (self *stateObject)AddLastRootState(statehash common.Hash, blockNumber uint
 		self.onDirty(self.Address())
 		self.onDirty = nil
 	}
+}
+
+// 更新账号绑定
+func (self *stateObject)UpdateAccountBinding(mainAccount common.Address, subAccount common.Address){
+	var bindingTable types.BindingTable
+	if self.data.CodeHash != nil {
+		json.Unmarshal(self.data.CodeHash, &bindingTable)
+	}
+	if bindingTable.MainAccounts == nil {
+		bindingTable.MainAccounts = make(map[common.Address][]common.Address)
+	}
+	if bindingTable.SubAccounts == nil {
+		bindingTable.SubAccounts = make(map[common.Address]common.Address)
+	}
+
+	bindingTable.UpdateBinding(mainAccount,subAccount)
+
+	b, _ := json.Marshal(bindingTable)
+	self.code = nil
+	self.data.CodeHash = b[:]
+	self.dirtyCode = true
+	if self.onDirty != nil {
+		self.onDirty(self.Address())
+		self.onDirty = nil
+	}
+}
+
+// 删除子账号绑定
+// 成功删除一个绑定账号返回true，否则返回false
+func (self *stateObject)DelSubAccountBinding(subAccount common.Address) bool{
+	var bindingTable types.BindingTable
+	if self.data.CodeHash != nil{
+		json.Unmarshal(self.data.CodeHash, &bindingTable)
+	} else {
+		return false
+	}
+
+	if bindingTable.IsSubAccountExist(subAccount) {
+		bindingTable.DelSubAccount(subAccount)
+
+		b, _ := json.Marshal(bindingTable)
+		self.code = nil
+		self.data.CodeHash = b[:]
+		self.dirtyCode = true
+		if self.onDirty != nil {
+			self.onDirty(self.Address())
+			self.onDirty = nil
+		}
+		return true
+	}
+	return false
+}
+
+// 主账号删除所有绑定
+// 返回删除主账号后的关联删除的子账号列表
+func (self *stateObject)DelMainAccountBinding(mainAccount common.Address) []common.Address{
+	var bindingTable types.BindingTable
+	if self.data.CodeHash != nil {
+		json.Unmarshal(self.data.CodeHash, &bindingTable)
+	} else {
+		return nil
+	}
+
+	if bindingTable.IsMainAccountExist(mainAccount) {
+		subAccounts := bindingTable.DelMainAccount(mainAccount)
+
+		b, _ := json.Marshal(bindingTable)
+		self.code = nil
+		self.data.CodeHash = b[:]
+		self.dirtyCode = true
+		if self.onDirty != nil {
+			self.onDirty(self.Address())
+			self.onDirty = nil
+		}
+		return subAccounts
+	}
+	return nil
+}
+
+// 获取所属子账号
+func (self *stateObject)GetSubAccounts(mainAccount common.Address) []common.Address{
+	var bindingTable types.BindingTable
+	if self.data.CodeHash != nil {
+		json.Unmarshal(self.data.CodeHash, &bindingTable)
+	} else {
+		return nil
+	}
+	if bindingTable.IsMainAccountExist(mainAccount) {
+		return bindingTable.MainAccounts[mainAccount]
+	}
+
+	return nil
+}
+
+// 获取子账号数量
+func (self *stateObject)GetSubAccountsCount(mainAccount common.Address) int{
+	var bindingTable types.BindingTable
+	if self.data.CodeHash != nil {
+		json.Unmarshal(self.data.CodeHash, &bindingTable)
+	} else {
+		return 0
+	}
+
+	return bindingTable.GetSubAccountSizeInMainAccount(mainAccount)
+}
+
+// 获取账号映射表
+func (self *stateObject)GetMainAccounts() map[common.Address][]common.Address{
+	var bindingTable types.BindingTable
+	if self.data.CodeHash != nil {
+		json.Unmarshal(self.data.CodeHash, &bindingTable)
+	} else {
+		return nil
+	}
+
+	return bindingTable.MainAccounts
+}
+
+// 获取所属主账号
+// 如果子账号不存在，则返回nil
+func (self *stateObject)GetMainAccount(subAccount common.Address) *common.Address{
+	var bindingTable types.BindingTable
+	if self.data.CodeHash != nil {
+		json.Unmarshal(self.data.CodeHash, &bindingTable)
+	} else {
+		return nil
+	}
+
+	if bindingTable.IsSubAccountExist(subAccount) {
+		mainAccount := bindingTable.SubAccounts[subAccount]
+		return &mainAccount
+	}
+
+	return nil
+}
+
+// 检查是否是绑定账号
+func (self *stateObject)IsBindingAccount(account common.Address) bool {
+	var bindingTable types.BindingTable
+	if self.data.CodeHash != nil {
+		json.Unmarshal(self.data.CodeHash, &bindingTable)
+	} else {
+		return false
+	}
+
+	return bindingTable.IsAccountInBinding(account)
+}
+
+// 检查是否是主账号
+func (self *stateObject)IsMainAccount(account common.Address) bool {
+	var bindingTable types.BindingTable
+	if self.data.CodeHash != nil {
+		json.Unmarshal(self.data.CodeHash, &bindingTable)
+	} else {
+		return false
+	}
+
+	return bindingTable.IsMainAccountExist(account)
+}
+
+// 检查是否是子账号
+func (self *stateObject)IsSubAccount(account common.Address) bool {
+	var bindingTable types.BindingTable
+	if self.data.CodeHash != nil {
+		json.Unmarshal(self.data.CodeHash, &bindingTable)
+	} else {
+		return false
+	}
+
+	return bindingTable.IsSubAccountExist(account)
 }
 
 func (self *stateObject)GetTrafficApplyPrice() *big.Int {

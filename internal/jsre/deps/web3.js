@@ -5279,6 +5279,13 @@ var methods = function () {
         outputFormatter: utils.toDecimal
     });
 
+    var getSubAccounts = new Method({
+        name: 'getSubAccounts',
+        call: 'eth_getSubAccounts',GetCommitteeRank
+        params: 2,
+        inputFormatter: [formatters.inputAddressFormatter,formatters.inputDefaultBlockNumberFormatter],
+    });
+
     var getCandidates = new Method({
         name: 'getCandidates',
         call: 'eth_getCandidates',
@@ -5289,6 +5296,13 @@ var methods = function () {
     var getCommitteeRank = new Method({
         name: 'getCommitteeRank',
         call: 'eth_getCommitteeRank',
+        params: 1,
+        inputFormatter: [formatters.inputDefaultBlockNumberFormatter],
+    });
+
+    var getAlreadyBackStakeList = new Method({
+        name: 'getAlreadyBackStakeList',
+        call: 'eth_getAlreadyBackStakeList',
         params: 1,
         inputFormatter: [formatters.inputDefaultBlockNumberFormatter],
     });
@@ -5307,7 +5321,6 @@ var methods = function () {
         inputFormatter: [formatters.inputDefaultBlockNumberFormatter],
     });
 
-    GetExtra
     var getExtra = new Method({
         name: 'getExtra',
         call: 'eth_getExtra',
@@ -5552,7 +5565,9 @@ var methods = function () {
         getGenaroCodeHash,
         getLastRootStates,
         getLastSynBlock,
-        getExtra
+        getExtra,
+        getAlreadyBackStakeList,
+        getSubAccounts
     ];
 };
 

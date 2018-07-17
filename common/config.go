@@ -23,9 +23,7 @@ func init() {
 var (
 	BaseCompany *big.Int
 
-	//var OneDayGes  int64 = int64(5000)
 	DefaultOneDaySyncLogGsaCost  *big.Int
-
 
 	DefaultBucketApplyGasPerGPerDay *big.Int
 
@@ -71,9 +69,16 @@ var (
 	//     七、跨链交易Sidechina: 交易发起方为存储，交易的"from"字段为用户address，交易的"to"字段为该特殊地址，参数类型字段为7
 	//     八、矿工节点同步:      交易发起方为矿工，交易的"from"字段为用户address，交易的"to"字段为该特殊地址，参数类型字段为8
 	SpecialSyncAddress Address = HexToAddress("0x6000000000000000000000000000000000000000")
+
+	//	用于存放收益计算数据的地址
+	RewardsSaveAddress Address = HexToAddress("0x7000000000000000000000000000000000000000")
+
+	// 父子账号的绑定表
+	BindingSaveAddress Address = HexToAddress("0x8000000000000000000000000000000000000000")
+
 )
 
-var SpecialAddressList = []Address{CandidateSaveAddress, BackStakeAddress, LastSynStateSaveAddress, StakeNode2StakeAddress, GenaroPriceAddress, SpecialSyncAddress}
+var SpecialAddressList = []Address{CandidateSaveAddress, BackStakeAddress, LastSynStateSaveAddress, StakeNode2StakeAddress, GenaroPriceAddress, SpecialSyncAddress, RewardsSaveAddress, BindingSaveAddress}
 
 
 
@@ -112,6 +117,7 @@ var (
 	//价格调控
 	SpecialTxTypePriceRegulation = big.NewInt(12)
 
+	// 区块状态同步特殊交易
 	SpecialTxSynState  = big.NewInt(13)
 
 	//解除节点绑定
@@ -120,6 +126,12 @@ var (
 	//同步分享秘钥
 	SynchronizeShareKey = big.NewInt(15)
 
+	// 账号绑定
+	SpecialTxAccountBinding = big.NewInt(16)
+
+	// 解除账号的绑定关系
+	SpecialTxAccountCancelBinding = big.NewInt(17)
+
 	//解锁分享秘钥
 	UnlockSharedKey = big.NewInt(20)
 )
@@ -127,7 +139,7 @@ var (
 
 
 
-	var Base = uint64(10000)	// 收益计算中间值
+	var Base = uint64(100000)	// 收益计算中间值
 	var BackStackListMax = int(20)		// 最大退注长度
 
 
@@ -141,7 +153,12 @@ var (
 	var ReadOnly int = 1
 	var Write int = 2
 
-
+	// 同步交易的块间隔
 	var SynBlockLen = uint64(6)
 
-
+	// 一个主节点最大的绑定数量
+	var MaxBinding = 10
+	// 一次最小的押注额度
+	var MinStake = uint64(5000)
+	// 进入委员会需要的最小stake
+	var CommitteeMinStake = uint64(5000)

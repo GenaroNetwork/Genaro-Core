@@ -570,6 +570,29 @@ func (s *PublicBlockChainAPI) GetExtra(ctx context.Context, blockNr rpc.BlockNum
 
 }
 
+func (s *PublicBlockChainAPI) GetAlreadyBackStakeList(ctx context.Context, blockNr rpc.BlockNumber) (backStackList common.BackStakeList, err error){
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
+	if state == nil || err != nil {
+		return
+	}
+	ok,backStackList := state.GetAlreadyBackStakeList()
+	if ok {
+		return
+	} else {
+		err = errors.New("GetAlreadyBackStakeList failed")
+	}
+	return
+}
+
+// 获取账号下的子账号队列
+func (s *PublicBlockChainAPI) GetSubAccounts(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (accounts []common.Address, err error) {
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
+	if state == nil || err != nil {
+		return
+	}
+	return state.GetSubAccounts(address),nil
+}
+
 // GetStake returns the stake of ether for the given address in the state of the
 // given block number. The rpc.LatestBlockNumber and rpc.PendingBlockNumber meta
 // block numbers are also allowed.
@@ -1153,7 +1176,7 @@ func (s *PublicTransactionPoolAPI) GetTransactionByBlockNumberAndIndex(ctx conte
 func (s *PublicTransactionPoolAPI) GetTransactionByBlockNumberRange(ctx context.Context, startBlockNr rpc.BlockNumber, endBlockNr rpc.BlockNumber, txType *big.Int) ([]*RPCTransaction, error) {
 	var specialTx []*RPCTransaction
 	if startBlockNr > endBlockNr {
-		return nil,errors.New("startBlockNumber can't large then endBlockNumber")
+		return nil,errors.New("startBlockNumber can't larger than endBlockNumber")
 	}
 	//最大遍历区间86400
 	var maxRange int64 = 86400
@@ -1267,7 +1290,7 @@ func (s *PublicTransactionPoolAPI) GetBucketTxInfo(ctx context.Context, startBlo
 }
 
 
-func (s *PublicTransactionPoolAPI) GetGenaroPrice(ctx context.Context) map[string]string {
+func (s *PublicTransactionPoolAPI) GetGenaroPrice(ctx context.Context, blockNr rpc.BlockNumber) map[string]string {
 	genaroPriceMap := make(map[string]string)
 	genaroPriceMap["bucketPricePerGperDay"] = common.DefaultBucketApplyGasPerGPerDay.String()
 	genaroPriceMap["trafficPricePerG"] = common.DefaultTrafficApplyGasPerG.String()
@@ -1275,7 +1298,7 @@ func (s *PublicTransactionPoolAPI) GetGenaroPrice(ctx context.Context) map[strin
 	genaroPriceMap["oneDayMortgageGes"] = common.DefaultOneDayMortgageGes.String()
 	genaroPriceMap["oneDaySyncLogGsaCost"] = common.DefaultOneDaySyncLogGsaCost.String()
 
-	state, _, err := s.b.StateAndHeaderByNumber(ctx, rpc.LatestBlockNumber)
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
 	if state == nil || err != nil {
 		return genaroPriceMap
 	}
@@ -1410,6 +1433,7 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceipt(ctx context.Context, ha
 		"contractAddress":   nil,
 		"logs":              receipt.Logs,
 		"logsBloom":         receipt.Bloom,
+		"extraInfo":         receipt.ExtraInfo,
 	}
 
 	// Assign receipt status or post state.

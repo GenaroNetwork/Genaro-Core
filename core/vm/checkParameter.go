@@ -8,11 +8,12 @@ import (
 	"math/big"
 	"crypto/sha256"
 
+	"golang.org/x/crypto/ripemd160"
 	"github.com/GenaroNetwork/Genaro-Core/core/types"
 	"github.com/GenaroNetwork/Genaro-Core/common"
 	"github.com/GenaroNetwork/Genaro-Core/crypto"
-	"golang.org/x/crypto/ripemd160"
-
+	"github.com/GenaroNetwork/Genaro-Core/common/hexutil"
+	"strings"
 )
 
 
@@ -117,14 +118,19 @@ func CheckUnlockSharedKeyParameter( s types.SpecialTxInput) error {
 	return nil
 }
 
-func CheckStakeTx(s types.SpecialTxInput) error {
+func CheckStakeTx(s types.SpecialTxInput, state StateDB) error {
 	adress := common.HexToAddress(s.Address)
 	if isSpecialAddress(adress){
 		return errors.New("param [address] can't be special address")
 	}
 
-	if s.Stake <= 0 {
-		return errors.New("value of stake must larger than zero")
+	if s.Stake < common.MinStake {
+		return errors.New("value of stake must larger than MinStake")
+	}
+
+	// 判断是否已经申请了退注
+	if state.IsAlreadyBackStake(adress) {
+		return errors.New("account in back stake list")
 	}
 	return nil
 }
@@ -139,10 +145,19 @@ func CheckSyncHeftTx(caller common.Address, s types.SpecialTxInput) error {
 		return errors.New("param [address] can't be special address")
 	}
 
+	if s.Heft <= 0 {
+		return errors.New("value of heft must larger than zero")
+	}
+
 	return nil
 }
 
 func CheckApplyBucketTx(s types.SpecialTxInput) error {
+	adress := common.HexToAddress(s.Address)
+	if isSpecialAddress(adress){
+		return errors.New("param [address] can't be special address")
+	}
+
 	for _, v := range s.Buckets {
 		if len(v.BucketId) != 64 {
 			return errors.New("length of bucketId must be 64")
@@ -163,38 +178,51 @@ func CheckTrafficTx(s types.SpecialTxInput) error {
 	return nil
 }
 
-func CheckSyncNodeTx(caller common.Address,stake uint64, existNodes []string, s types.SpecialTxInput, stakeVlauePerNode *big.Int) error {
+
+func CheckSyncNodeTx(caller common.Address, s types.SpecialTxInput, db StateDB) error {
+	stake, _ := db.GetStake(caller)
+	existNodes := db.GetStorageNodes(caller)
+	stakeVlauePerNode := db.GetStakePerNodePrice()
 
 	if len(s.NodeID) == 0 {
 		return errors.New("length of nodeId must larger then 0")
 	}
 
+	paramAddress := common.HexToAddress(s.Address)
 	//caller和节点待绑定账户是否一致
-	if caller.String() != s.Address {
-		return errors.New("two address not equal")
+	if caller != paramAddress {
+		return errors.New("address in param is not equal with callerAddress of this Tx")
 	}
 
+
 	//校验节点是否已经绑定过
-	for _, existNode := range existNodes {
-		if s.NodeID == existNode {
-			return errors.New("the node has been bound to the account")
-		}
+	if db.GetAddressByNode(s.NodeID) != "" {
+		return errors.New("the input node have been bound by themselves or others")
 	}
 
 	// 验证节点绑定签名
 	// 拼接message
-	msg := s.NodeID + s.Sign
-	recoveredPub, err := crypto.Ecrecover([]byte(msg), []byte(s.Sign))
+	msg := s.NodeID + s.Address
+
+	sig, err := hexutil.Decode(s.Sign)
 	if err != nil {
-		errors.New("ECRecover error when valid sign")
+		return errors.New("sign without 0x prefix")
+	}
+
+	recoveredPub, err := crypto.SigToPub(crypto.Keccak256([]byte(msg)), sig)
+	if err != nil {
+		return errors.New("ECRecover error when valid sign")
 	}
 
 	//get publickey
-	pubKey := crypto.CompressPubkey(crypto.ToECDSAPub(recoveredPub))
+	pubKey := crypto.CompressPubkey(recoveredPub)
+
 
 	genNodeID := generateNodeId(pubKey)
+	//log.Info(fmt.Sprintf("genNodeId:%s", genNodeID))
+	//log.Info(fmt.Sprintf("s.nodeId:%s", s.NodeID))
 	if genNodeID != s.NodeID {
-		return errors.New("sign valid error")
+		return errors.New("sign valid error, nodeId mismatch")
 	}
 
 	var nodeNum int = 1
@@ -205,7 +233,9 @@ func CheckSyncNodeTx(caller common.Address,stake uint64, existNodes []string, s 
 	needStakeVale := big.NewInt(0)
 	needStakeVale.Mul(big.NewInt(int64(nodeNum)), stakeVlauePerNode)
 
-	if needStakeVale.Cmp(big.NewInt(int64(stake*1000000000000000000))) != 1 {
+	currentStake := new(big.Int).Mul(new(big.Int).SetUint64(stake), common.BaseCompany)
+
+	if needStakeVale.Cmp(currentStake) != 1 {
 		return errors.New("none enough stake to synchronize node")
 	}
 	return nil
@@ -233,6 +263,25 @@ func CheckPunishmentTx(caller common.Address,s types.SpecialTxInput) error {
 	return nil
 }
 
+func CheckBackStakeTx(caller common.Address, state StateDB) error {
+	ok,backStakeList := state.GetAlreadyBackStakeList()
+	if !ok {
+		return errors.New("userBackStake fail")
+	}
+	if len(backStakeList) > common.BackStackListMax {
+		return errors.New("BackStackList too long")
+	}
+	// 判断是否是绑定用户
+	if state.IsBindingAccount(caller) {
+		return errors.New("account is binding")
+	}
+	// 判断是否已经申请了退注
+	if state.IsAlreadyBackStake(caller) {
+		return errors.New("account in back stake list")
+	}
+	return nil
+}
+
 func CheckSynStateTx(caller common.Address) error {
 	if caller !=  common.OfficialAddress {
 		return errors.New("caller address of this transaction is not invalid")
@@ -252,10 +301,15 @@ func CheckSyncFileSharePublicKeyTx(s types.SpecialTxInput) error {
 	return nil
 }
 
-func CheckPriceRegulation(caller common.Address) error {
+func CheckPriceRegulation(caller common.Address ,s types.SpecialTxInput) error {
 	if caller !=  common.GenaroPriceAddress {
 		return errors.New("caller address of this transaction is not invalid")
 	}
+
+	if s.StakeValuePerNode == nil && s.BucketApplyGasPerGPerDay == nil && s.TrafficApplyGasPerG == nil && s.OneDayMortgageGes == nil && s.OneDaySyncLogGsaCost == nil {
+		return errors.New("none price to update")
+	}
+
 	return nil
 }
 
@@ -275,3 +329,70 @@ func CheckUnbindNodeTx(caller common.Address,s types.SpecialTxInput, existNodes 
 	}
 	return errors.New("this node does not belong to this account")
 }
+
+// 账号绑定检查
+func CheckAccountBindingTx(caller common.Address,s types.SpecialTxInput, state StateDB) error{
+	// 检查是否是官方账号
+	if caller !=  common.OfficialAddress {
+		return errors.New("caller address of this transaction is not invalid")
+	}
+	// 主账号
+	mainAccount := common.HexToAddress(s.Address)
+	// 子账号
+	subAccount := common.HexToAddress(s.Message)
+	// 主账号是否是候选者
+	if !state.IsCandidateExist(mainAccount) {
+		return errors.New("mainAddr is not a candidate")
+	}
+	// 主账号绑定数量是否超出限制
+	if state.GetSubAccountsCount(mainAccount) > common.MaxBinding {
+		return errors.New("binding enough")
+	}
+	// 绑定的子账号是否已经是一个主账号
+	if state.IsBindingMainAccount(subAccount) {
+		return errors.New("sub account is a main account")
+	}
+	// 子账号是否是候选者或存在于子账号队列中
+	thisMainAccount := state.GetMainAccount(subAccount)
+	if !state.IsCandidateExist(subAccount) && thisMainAccount == nil{
+		return errors.New("subAddr is not a candidate")
+	}
+	// 账号是否已经处于绑定状态
+	if thisMainAccount != nil && bytes.Compare(thisMainAccount.Bytes(),mainAccount.Bytes()) == 0 {
+		return errors.New("has binding")
+	}
+
+	return nil
+}
+
+// 检查输入参数，并返回执行类型
+// 1 主账号解绑
+// 2 子账号解绑
+// 3 主账号解绑子账号
+func CheckAccountCancelBindingTx(caller common.Address,s types.SpecialTxInput, state StateDB) (t int,err error){
+	// 判断账号类型
+	if state.IsBindingMainAccount(caller) {
+		if strings.EqualFold(s.Address,"") {
+			t = 1
+		} else {
+			subAccount := common.HexToAddress(s.Address)
+			if state.IsBindingSubAccount(subAccount) {
+				thisMainAccount := state.GetMainAccount(subAccount)
+				if thisMainAccount !=nil && bytes.EqualFold(thisMainAccount.Bytes(),caller.Bytes()){
+					t = 3
+				} else {
+					err = errors.New("not binding account")
+				}
+			}else {
+				err = errors.New("not binding account")
+			}
+		}
+
+	} else if state.IsBindingSubAccount(caller) {
+		t = 2
+	} else {
+		err = errors.New("not binding account")
+	}
+	return
+}
+

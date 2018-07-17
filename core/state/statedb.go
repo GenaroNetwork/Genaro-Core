@@ -762,9 +762,34 @@ func (self *StateDB)GetStakeRangeDiff(id common.Address, blockNumStart uint64, b
 
 // add a new candidate
 func (self *StateDB)AddCandidate(candidate common.Address) bool {
+	// 判断是否属于绑定账号，是则无需加入委员会
+	stateBindingObject := self.GetOrNewStateObject(common.BindingSaveAddress)
+	if stateBindingObject !=nil && stateBindingObject.IsBindingAccount(candidate){
+		return true
+	}
+
 	stateObject := self.GetOrNewStateObject(common.CandidateSaveAddress)
 	if stateObject != nil {
 		stateObject.AddCandidate(candidate)
+		return true
+	}
+	return false
+}
+
+// 判断是否为候选者
+func (self *StateDB)IsCandidateExist(candidate common.Address) bool {
+	stateObject := self.GetOrNewStateObject(common.CandidateSaveAddress)
+	if stateObject != nil {
+		return stateObject.IsCandidateExist(candidate)
+	}
+	return false
+}
+
+// delete a candidate
+func (self *StateDB)DelCandidate(candidate common.Address) bool {
+	stateObject := self.GetOrNewStateObject(common.CandidateSaveAddress)
+	if stateObject != nil {
+		stateObject.DelCandidate(candidate)
 		return true
 	}
 	return false
@@ -802,6 +827,35 @@ func (self *StateDB)GetCandidatesInfoInRange(blockNumStart uint64, blockNumEnd u
 		return CandidateInfoArray
 	}
 	return nil
+}
+
+// 获取委员会权重信息，包含了子账号的权重
+func (self *StateDB)GetCandidatesInfoWithAllSubAccounts() []CandidateInfo {
+	stateObject := self.getStateObject(common.CandidateSaveAddress)
+	if stateObject != nil {
+		candidates := stateObject.GetCandidates()
+		CandidateInfoArray := make([]CandidateInfo,len(candidates))
+		for id,candidate := range candidates {
+			CandidateInfoArray[id] = self.GetCandidateInfoWithAllSubAccounts(candidate)
+		}
+		return CandidateInfoArray
+	}
+	return nil
+}
+
+// 获取委员权重信息，包含了子账号的权重
+func (self *StateDB)GetCandidateInfoWithAllSubAccounts(candidate common.Address) (candidateInfo CandidateInfo) {
+	candidateInfo.Signer = candidate
+	candidateInfo.Heft,_ = self.GetHeft(candidate)
+	candidateInfo.Stake,_ = self.GetStake(candidate)
+	subAccounts := self.GetSubAccounts(candidate)
+	for _,subAccount := range subAccounts {
+		heft,_ := self.GetHeft(subAccount)
+		stake,_ := self.GetStake(subAccount)
+		candidateInfo.Heft += heft
+		candidateInfo.Stake += stake
+	}
+	return
 }
 
 func (self *StateDB)UpdateBucketProperties(userid common.Address, bucketid string, size uint64, backup uint64, timestart uint64, timeend uint64) bool {
@@ -949,13 +1003,10 @@ func (self *StateDB)SpecialTxTypeSyncSidechainStatus(address common.Address, Spe
 }
 
 func (self *StateDB)SyncStakeNode(address common.Address,s string) error {
-
-	currentStakePrice := self.GetStakePerNodePrice()
-
 	stateObject := self.GetOrNewStateObject(address)
 	var err error = nil
 	if stateObject != nil {
-		err = stateObject.SyncStakeNode(s, currentStakePrice)
+		err = stateObject.SyncStakeNode(s)
 	}
 	return err
 }
@@ -997,6 +1048,15 @@ func (self *StateDB)GetAlreadyBackStakeList() (bool,common.BackStakeList) {
 		return true,backStacks
 	}
 	return false,nil
+}
+
+// 判断是否已经申请退注
+func (self *StateDB)IsAlreadyBackStake(addr common.Address) bool {
+	ok,backStakeList := self.GetAlreadyBackStakeList()
+	if !ok {
+		return ok
+	}
+	return backStakeList.IsAccountExist(addr)
 }
 
 //set back stake list
@@ -1063,11 +1123,109 @@ func (self *StateDB)UpdateBucketApplyPrice(address common.Address,	price *hexuti
         return false
 }
 
+// 添加同步使用的最近块信息
 func (self *StateDB)AddLastRootState(statehash common.Hash, blockNumber uint64) bool {
 	stateObject := self.getStateObject(common.LastSynStateSaveAddress)
 	if stateObject != nil {
 		stateObject.AddLastRootState(statehash,blockNumber)
 		return true
+	}
+	return false
+}
+
+// 账号绑定更新
+func (self *StateDB)UpdateAccountBinding(mainAccount common.Address, subAccount common.Address) bool {
+	stateObject := self.GetOrNewStateObject(common.BindingSaveAddress)
+	if stateObject != nil {
+		stateObject.UpdateAccountBinding(mainAccount, subAccount)
+		return true
+	}
+	return false
+}
+
+// 取消子账号的绑定
+func (self *StateDB)DelSubAccountBinding(subAccount common.Address) bool {
+	stateObject := self.GetOrNewStateObject(common.BindingSaveAddress)
+	if stateObject != nil {
+		return stateObject.DelSubAccountBinding(subAccount)
+	}
+	return false
+}
+
+// 获取子账号数量
+func (self *StateDB)GetSubAccountsCount(mainAccount common.Address) int {
+	stateObject := self.getStateObject(common.BindingSaveAddress)
+	if stateObject != nil {
+		return stateObject.GetSubAccountsCount(mainAccount)
+	}
+	return 0
+}
+
+// 获得相关主账号的子账号
+// 如果子账号不存在，则返回nil
+func (self *StateDB)GetSubAccounts(mianAccount common.Address) []common.Address {
+	stateObject := self.getStateObject(common.BindingSaveAddress)
+	if stateObject != nil {
+		mainAccount := stateObject.GetSubAccounts(mianAccount)
+		return mainAccount
+	}
+	return nil
+}
+
+// 获取账号映射表
+func (self *StateDB)GetMainAccounts() map[common.Address][]common.Address {
+	stateObject := self.getStateObject(common.BindingSaveAddress)
+	if stateObject != nil {
+		mainAccounts := stateObject.GetMainAccounts()
+		return mainAccounts
+	}
+	return nil
+}
+
+// 解除主账号的绑定
+func (self *StateDB)DelMainAccountBinding(mianAccount common.Address) []common.Address {
+	stateObject := self.getStateObject(common.BindingSaveAddress)
+	if stateObject != nil {
+		subAccounts := stateObject.DelMainAccountBinding(mianAccount)
+		return subAccounts
+	}
+	return nil
+}
+
+// 获得相关子账号的主账号
+// 如果子账号不存在，则返回nil
+func (self *StateDB)GetMainAccount(subAccount common.Address) (*common.Address) {
+	stateObject := self.getStateObject(common.BindingSaveAddress)
+	if stateObject != nil {
+		mainAccount := stateObject.GetMainAccount(subAccount)
+		return mainAccount
+	}
+	return nil
+}
+
+// 检查账号是否是子账号
+func (self *StateDB)IsBindingSubAccount(account common.Address) bool {
+	stateObject := self.getStateObject(common.BindingSaveAddress)
+	if stateObject != nil {
+		return stateObject.IsSubAccount(account)
+	}
+	return false
+}
+
+// 检查账号是否是主账号
+func (self *StateDB)IsBindingMainAccount(account common.Address) bool {
+	stateObject := self.getStateObject(common.BindingSaveAddress)
+	if stateObject != nil {
+		return stateObject.IsMainAccount(account)
+	}
+	return false
+}
+
+// 检查账号是否是绑定账号
+func (self *StateDB)IsBindingAccount(account common.Address) bool {
+	stateObject := self.getStateObject(common.BindingSaveAddress)
+	if stateObject != nil {
+		return stateObject.IsBindingAccount(account)
 	}
 	return false
 }
@@ -1128,7 +1286,8 @@ func (self *StateDB)GetGenaroPrice() *types.GenaroPrice {
 	if stateObject != nil {
 		return stateObject.GetGenaroPrice()
         }
-        return nil
+    return nil
+
 }
 
 func (self *StateDB)GetLastSynState() *types.LastSynState{

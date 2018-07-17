@@ -14,6 +14,7 @@ type ExtraData struct {
 	LastSynBlockHash  common.Hash     `json:"lastSynBlockHash"`
 	Signature     []byte           `json:"signature"`     // the signature of block broadcaster
 	Proportion	  []uint64		   `json:"ratio"`
+	CommitteeAccountBinding 	map[common.Address][]common.Address	`json:"CommitteeAccountBinding"`	// 委员会账号的绑定信息
 }
 
 func UnmarshalToExtra(header *types.Header) *ExtraData {
@@ -56,6 +57,19 @@ func SetHeaderCommitteeRankList(header *types.Header, committeeRank []common.Add
 	return nil
 }
 
+// 设置委员会的绑定表
+func SetCommitteeAccountBinding(header *types.Header, committeeAccountBinding map[common.Address][]common.Address) error{
+	extraData := UnmarshalToExtra(header)
+	extraData.CommitteeAccountBinding = committeeAccountBinding
+	extraByte, err := json.Marshal(extraData)
+	if err != nil {
+		return err
+	}
+	header.Extra = make([]byte, len(extraByte))
+	copy(header.Extra, extraByte)
+	return nil
+}
+
 //func SetHeaderSentinelHeft(header *types.Header, sentinelHeft uint64) {
 //	extraData := UnmarshalToExtra(header)
 //	extraData.SentinelHeft = sentinelHeft
@@ -81,4 +95,9 @@ func CreateCommitteeRankByte(address []common.Address) []byte {
 	extraByte, _ := json.Marshal(extra)
 	return extraByte
 
+}
+
+func GetCommitteeAccountBinding(header *types.Header) (committeeAccountBinding map[common.Address][]common.Address) {
+	extraData := UnmarshalToExtra(header)
+	return extraData.CommitteeAccountBinding
 }

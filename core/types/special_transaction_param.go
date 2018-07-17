@@ -5,6 +5,9 @@ import (
 	"github.com/GenaroNetwork/Genaro-Core/common/hexutil"
 	"math/big"
 	"math"
+	"bytes"
+	"fmt"
+	"github.com/GenaroNetwork/Genaro-Core/log"
 )
 
 type SpecialTxInput struct {
@@ -24,41 +27,45 @@ type GenaroPrice struct {
 	StakeValuePerNode *hexutil.Big `json:"stakeValuePerNode"`
 	OneDayMortgageGes	*hexutil.Big `json:"oneDayMortgageGes"`
 	OneDaySyncLogGsaCost  *hexutil.Big `json:"oneDaySyncLogGsaCost"`
+	ExtraPrice     []byte   `json:"extraPrice"` //该版本用不上，考虑后期版本兼容性使用
 }
 
-func (s SpecialTxInput) SpecialCost(currentPrice *GenaroPrice) *big.Int {
-	rt := new(big.Int)
-	switch s.Type.ToInt() {
-	case common.SpecialTxTypeStakeSync:
-		return rt.SetUint64(s.Stake*1000000000000000000)
-	case common.SpecialTxTypeSpaceApply:
-		var totalCost *big.Int
+func (s SpecialTxInput) SpecialCost(currentPrice *GenaroPrice) big.Int {
+
+	switch s.Type.ToInt().Uint64() {
+	case common.SpecialTxTypeStakeSync.Uint64():
+		ret := new(big.Int).Mul(new(big.Int).SetUint64(s.Stake),common.BaseCompany)
+		return *ret
+	case common.SpecialTxTypeSpaceApply.Uint64():
+		var totalCost *big.Int = big.NewInt(0)
+		var bucketPrice *big.Int
+		if currentPrice != nil && currentPrice.BucketApplyGasPerGPerDay != nil {
+			bucketPrice = new(big.Int).Set(currentPrice.BucketApplyGasPerGPerDay.ToInt())
+		}else {
+			bucketPrice = new(big.Int).Set(common.DefaultBucketApplyGasPerGPerDay)
+		}
 		for _, v := range s.Buckets {
-			var bucketPrice *big.Int
-			if currentPrice == nil || currentPrice.BucketApplyGasPerGPerDay == nil {
-				bucketPrice = common.DefaultBucketApplyGasPerGPerDay
-			}else{
-				bucketPrice = currentPrice.BucketApplyGasPerGPerDay.ToInt()
-			}
-			duration := math.Abs(float64(v.TimeStart) - float64(v.TimeEnd))
-
-			oneCost := bucketPrice.Mul(bucketPrice, big.NewInt(int64(v.Size) * int64(math.Ceil(duration/10))))
-
+			duration := math.Ceil(math.Abs(float64(v.TimeStart) - float64(v.TimeEnd))/86400)
+			//log.Info(fmt.Sprintf("duration: %f",duration))
+			oneCost := new(big.Int).Mul(bucketPrice, big.NewInt(int64(v.Size) * int64(duration)))
+			//log.Info(fmt.Sprintf("oneCost: %s",oneCost.String()))
 			totalCost.Add(totalCost, oneCost)
 		}
+		log.Info(fmt.Sprintf("bucket apply cost:%s", totalCost.String()))
+		return *totalCost
+	case common.SpecialTxTypeTrafficApply.Uint64():
 
-		return totalCost
-
-	case common.SpecialTxTypeTrafficApply:
 		var trafficPrice *big.Int
-		if currentPrice == nil || currentPrice.TrafficApplyGasPerG == nil {
-			trafficPrice = common.DefaultTrafficApplyGasPerG
-		}else{
-			trafficPrice = currentPrice.TrafficApplyGasPerG.ToInt()
+		if currentPrice != nil && currentPrice.BucketApplyGasPerGPerDay != nil {
+			trafficPrice = new(big.Int).Set(currentPrice.TrafficApplyGasPerG.ToInt())
+		}else {
+			trafficPrice = new(big.Int).Set(common.DefaultTrafficApplyGasPerG)
 		}
-		totalGas := trafficPrice.Mul(trafficPrice, big.NewInt(int64(s.Traffic)))
-		return totalGas
-	case common.SpecialTxTypeMortgageInit:
+
+		totalGas := new(big.Int).Mul(trafficPrice, big.NewInt(int64(s.Traffic)))
+		log.Info(fmt.Sprintf("traffic apply cost:%s", totalGas.String()))
+		return *totalGas
+	case common.SpecialTxTypeMortgageInit.Uint64():
 		sumMortgageTable := new(big.Int)
 		mortgageTable := s.SpecialTxTypeMortgageInit.MortgageTable
 		for _, v := range mortgageTable {
@@ -67,9 +74,9 @@ func (s SpecialTxInput) SpecialCost(currentPrice *GenaroPrice) *big.Int {
 		temp := s.SpecialTxTypeMortgageInit.TimeLimit.ToInt().Mul(s.SpecialTxTypeMortgageInit.TimeLimit.ToInt(), big.NewInt(int64(len(mortgageTable))))
 		timeLimitGas := temp.Mul(temp, common.DefaultOneDayMortgageGes)
 		sumMortgageTable.Add(sumMortgageTable, timeLimitGas)
-		return sumMortgageTable
+		return *sumMortgageTable
 	default:
-		return big.NewInt(0)
+		return *big.NewInt(0)
 	}
 }
 
@@ -135,7 +142,7 @@ type FileIDArr struct {
 //Cross-chain storage processing
 type SpecialTxTypeMortgageInit FileIDArr
 
-
+// 区块同步信号的数据结构
 type LastSynState struct {
 	LastRootStates map[common.Hash]uint64	`json:"LastRootStates"`
 	LastSynBlockNum uint64					`json:"LastSynBlockNum"`
@@ -158,3 +165,83 @@ func (lastSynState *LastSynState)AddLastSynState(blockhash common.Hash, blockNum
 	}
 }
 
+// 父子账号绑定关系表
+type BindingTable struct {
+	MainAccounts	map[common.Address][]common.Address		`json:"MainAccounts"`
+	SubAccounts		map[common.Address]common.Address			`json:"SubAccounts"`
+}
+
+func (bindingTable *BindingTable) GetSubAccountSizeInMainAccount(mainAccount common.Address) int {
+	if bindingTable.IsMainAccountExist(mainAccount) {
+		return len(bindingTable.MainAccounts[mainAccount])
+	}
+	return 0
+}
+
+func (bindingTable *BindingTable) IsAccountInBinding(account common.Address) bool{
+	if bindingTable.IsSubAccountExist(account) || bindingTable.IsMainAccountExist(account) {
+		return true
+	}
+	return false
+}
+
+func (bindingTable *BindingTable) IsSubAccountExist(subAccount common.Address) bool{
+	_,ok := bindingTable.SubAccounts[subAccount]
+	return ok
+}
+
+func (bindingTable *BindingTable) IsMainAccountExist(mainAccount common.Address) bool{
+	_,ok := bindingTable.MainAccounts[mainAccount]
+	return ok
+}
+
+// 删除子账号的绑定
+func (bindingTable *BindingTable) DelSubAccount(subAccount common.Address){
+	mainAccount,ok := bindingTable.SubAccounts[subAccount]
+	if ok {
+		subAccounts := bindingTable.MainAccounts[mainAccount]
+		for i,account := range subAccounts {
+			if bytes.Compare(account.Bytes(),subAccount.Bytes()) == 0 {
+				subAccounts = append(subAccounts[:i],subAccounts[i+1:]...)
+				break
+			}
+		}
+		delete(bindingTable.SubAccounts,subAccount)
+		bindingTable.MainAccounts[mainAccount] = subAccounts
+		if len(subAccounts) == 0 {
+			delete(bindingTable.MainAccounts,mainAccount)
+		}
+	}
+}
+
+// 删除主账号账号的绑定
+// 返回被关联删除的子账号列表
+func (bindingTable *BindingTable) DelMainAccount(mainAccount common.Address) []common.Address{
+	subAccounts,ok := bindingTable.MainAccounts[mainAccount]
+	if ok {
+		for _,account := range subAccounts {
+			delete(bindingTable.SubAccounts,account)
+		}
+		delete(bindingTable.MainAccounts,mainAccount)
+	}
+	return subAccounts
+}
+
+// 更新绑定信息
+func (bindingTable *BindingTable) UpdateBinding(mainAccount,subAccount common.Address) {
+	// 账号已绑定
+	if bytes.Compare(bindingTable.SubAccounts[subAccount].Bytes(),mainAccount.Bytes()) == 0{
+		return
+	}
+	// 账号已存在
+	if bindingTable.IsSubAccountExist(subAccount) {
+		bindingTable.DelSubAccount(subAccount)
+	}
+
+	if bindingTable.IsMainAccountExist(mainAccount){
+		bindingTable.MainAccounts[mainAccount] = append(bindingTable.MainAccounts[mainAccount],subAccount)
+	}else {
+		bindingTable.MainAccounts[mainAccount] = []common.Address{subAccount}
+	}
+	bindingTable.SubAccounts[subAccount] = mainAccount
+}
