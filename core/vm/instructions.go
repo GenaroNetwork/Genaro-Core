@@ -28,6 +28,7 @@ import (
 	"github.com/GenaroNetwork/Genaro-Core/params"
 	"github.com/GenaroNetwork/Genaro-Core/common/hexutil"
 	"encoding/hex"
+	"encoding/binary"
 )
 
 var (
@@ -486,46 +487,70 @@ func opCodeCopy(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack 
 }
 
 //todo 实现自定义指令对应函数功能
+//todo 最后记得要吧offset+length重新放回 李老师
 func opDataVerisonRead(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	address, fileId,dataVersion:= stack.pop(),stack.pop(),stack.pop()
+	//address, fileId,dataVersion:= stack.pop(),stack.pop(),stack.pop()
+	address, fileId,dataVersion,offset,length := stack.pop(),stack.pop(),stack.pop(),stack.pop(),stack.pop()
 	//address, offset1, size1,offset2,size2,retOffset:= stack.pop(),stack.pop(),stack.pop(),stack.pop(),stack.pop(),stack.pop()
 	//fileId := string(memory.Get(offset1.Int64(),size1.Int64()))
 	//dataVersion := string(memory.Get(offset2.Int64(),size2.Int64()))
 	var txLog map[common.Address] *hexutil.Big
 	var err error
+	var addressArr [8]common.Address
+	var intArr [8]uint64
+	//var int11 *hexutil.Big
 	var fileIdArr [32]byte
+	var retByte []byte
+	retByte = make([]byte, length.Uint64())
+	var tempByte []byte
 	math.U256(fileId)
 	math.U256(dataVersion)
 	byteArr := (fileId).Bytes()
 	for i,v :=range byteArr{
 		fileIdArr[i] = v
 	}
+	///addressArr.Bytes()
+	//binary.BigEndian.PutUint64(retByte,int11.ToInt().Uint64())
 	//txLog,err = evm.StateDB.TxLogByDataVersionRead(common.BigToAddress(address),fileIdArr,strconv.FormatInt(dataVersion.Int64(),10)) //is not dataVersion.String()
 	txLog,err = evm.StateDB.TxLogByDataVersionRead(common.BigToAddress(address),fileIdArr,hex.EncodeToString(dataVersion.Bytes()))
 	var i int
 	var zeroAddress common.Address
-	if err == nil {
-		stack.push(evm.interpreter.intPool.get().SetUint64(1))
-        for k,v := range txLog{
-        	stack.push(evm.interpreter.intPool.get().SetUint64(v.ToInt().Uint64()))
-        	stack.push(k.Big())
-        	i++
-		}
-		for i < 8 {
-			stack.push(evm.interpreter.intPool.getZero())
-			stack.push(zeroAddress.Big())
-			i++
-		}
-	}else{
-		stack.push(evm.interpreter.intPool.getZero())
-		i = 0
-		for  i < 8 {
-			stack.push(evm.interpreter.intPool.getZero())
-			stack.push(zeroAddress.Big())
-			i++
-		}
+	for k,v := range txLog{
+		addressArr[i] = k
+		intArr[i] = v.ToInt().Uint64()
+		i++
 	}
-	evm.interpreter.intPool.put(address,fileId,dataVersion)
+	for i < 8 {
+		addressArr[i] = zeroAddress
+		intArr[i] = 0
+		i++
+	}
+	if err == nil {
+		tempByte = make ([]byte,8)
+		binary.BigEndian.PutUint64(tempByte,uint64(1))
+		retByte = append(retByte,tempByte...)
+
+	}else{
+		tempByte = make ([]byte,8)
+		binary.BigEndian.PutUint64(tempByte,uint64(0))
+		retByte = append(retByte,tempByte...)
+	}
+	i = 0
+	for i < 8 {
+		retByte = append(retByte,addressArr[i].Bytes()...)
+		i++
+	}
+	i = 0
+	for i < 8 {
+		tempByte = make ([]byte,8)
+		binary.BigEndian.PutUint64(tempByte,intArr[i])
+		retByte = append(retByte,tempByte...)
+		i++
+	}
+	memory.Set(offset.Uint64(),length.Uint64(),retByte)
+	stack.push(evm.interpreter.intPool.get().Set(offset))
+	stack.push(evm.interpreter.intPool.get().Set(length))
+	//evm.interpreter.intPool.put(address,fileId,dataVersion)
 	return nil, nil
 }
 

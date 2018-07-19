@@ -65,6 +65,10 @@ func memoryCall(stack *Stack) *big.Int {
 	return math.BigMax(x, y)
 }
 
+func memoryDataVersionRead(stack *Stack) *big.Int {
+	return calcMemSize(stack.Back(3), stack.Back(4))
+}
+
 func memoryCallCode(stack *Stack) *big.Int {
 	x := calcMemSize(stack.Back(5), stack.Back(6))
 	y := calcMemSize(stack.Back(3), stack.Back(4))

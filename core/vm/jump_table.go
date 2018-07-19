@@ -350,16 +350,15 @@ func NewFrontierInstructionSet() [256]operation {
 		},
 		DATA_VERSION_READ: {
 			execute:       opDataVerisonRead,
-			gasCost:       gasDataVersion,
-			validateStack: makeStackFunc(3, 17),
-			memorySize:    memoryCodeCopy,
+			gasCost:       gasDataVersionRead,
+			validateStack: makeStackFunc(5, 2),
+			memorySize:    memoryDataVersionRead,
 			valid:         true,
 		},
 		DATA_VERSION_UPDATE: {
 			execute:       opDataVerisonUpdate,
-			gasCost:       gasDataVersion,
+			gasCost:       gasDataVersionUpdate,
 			validateStack: makeStackFunc(2, 1),
-			memorySize:    memoryCodeCopy,
 			valid:         true,
 		},
 		GASPRICE: {
