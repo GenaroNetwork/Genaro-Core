@@ -9,7 +9,7 @@ heftKey="heft"
 heftVal=200
 
 stakeKey="stake"
-stakeVal=400
+stakeVal=5010
 printf "{\n"
 for ((i=0;i<${#array[@]};i++))
 do
