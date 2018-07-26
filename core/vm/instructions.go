@@ -555,7 +555,7 @@ func opDataVerisonRead(pc *uint64, evm *EVM, contract *Contract, memory *Memory,
 }
 
 func opDataVerisonUpdate(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	address, fileId := stack.pop(),stack.pop()
+	fileId,address := stack.pop(),stack.pop()
 	//address, offset, size ,switchValue := stack.pop(),stack.pop(),stack.pop(),stack.pop()
 	//fileId := string(memory.Get(offset.Int64(),size.Int64()))
 	var fileIdArr [32]byte
@@ -594,7 +594,7 @@ func opGasprice(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack 
 
 //todo 实现自定义指令对应函数功能
 func opStorageGasprice(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	address, bucketId := stack.pop(),stack.pop()
+	 bucketId ,address := stack.pop(),stack.pop()
 	//address, offset, size := stack.pop(),stack.pop(),stack.pop()
 	//bucketId := string(memory.Get(offset.Int64(),size.Int64()))
 	var bucketIdArr [32]byte
@@ -651,7 +651,7 @@ func opGasLimit(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack 
 }
 
 func opStorageGasUsed(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	address, bucketId := stack.pop(),stack.pop()
+	bucketId,address := stack.pop(),stack.pop()
 	//address, offset, size := stack.pop(),stack.pop(),stack.pop()
 	//bucketId := string(memory.Get(offset.Int64(),size.Int64()))
 	var bucketIdArr [32]byte
@@ -770,7 +770,7 @@ func opMsize(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *St
 
 //todo 实现自定义指令对应函数功能
 func opSsize(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	address, bucketId := stack.pop(),stack.pop()
+	 bucketId,address := stack.pop(),stack.pop()
 	//address, offset, size := stack.pop(),stack.pop(),stack.pop()
 	//bucketId := string(memory.Get(offset.Int64(),size.Int64()))
 	var bucketIdArr [32]byte
@@ -796,7 +796,7 @@ func opGas(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stac
 // todo 实现自定义指令对应函数功能
 // 获取交易的StorageGas,获取后压入栈中
 func opStorageGas(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
-	address, bucketId := stack.pop(),stack.pop()
+	 bucketId,address := stack.pop(),stack.pop()
 	//address, offset, size := stack.pop(),stack.pop(),stack.pop()
 	//bucketId := string(memory.Get(offset.Int64(),size.Int64()))
 	var bucketIdArr [32]byte
