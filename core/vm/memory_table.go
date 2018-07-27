@@ -66,7 +66,7 @@ func memoryCall(stack *Stack) *big.Int {
 }
 
 func memoryDataVersionRead(stack *Stack) *big.Int {
-	return calcMemSize(stack.Back(3), stack.Back(4))
+	return calcMemSize(stack.Back(3), new(big.Int).SetUint64(32*16))
 }
 
 func memoryCallCode(stack *Stack) *big.Int {

@@ -351,7 +351,7 @@ func NewFrontierInstructionSet() [256]operation {
 		DATA_VERSION_READ: {
 			execute:       opDataVerisonRead,
 			gasCost:       gasDataVersionRead,
-			validateStack: makeStackFunc(5, 2),
+			validateStack: makeStackFunc(4, 1),
 			memorySize:    memoryDataVersionRead,
 			valid:         true,
 		},
