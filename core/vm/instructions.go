@@ -28,7 +28,6 @@ import (
 	"github.com/GenaroNetwork/Genaro-Core/params"
 	"github.com/GenaroNetwork/Genaro-Core/common/hexutil"
 	"encoding/hex"
-	"encoding/binary"
 )
 
 var (
