@@ -161,6 +161,13 @@ func (a Address) Str() string   { return string(a[:]) }
 func (a Address) Bytes() []byte { return a[:] }
 func (a Address) Big() *big.Int { return new(big.Int).SetBytes(a[:]) }
 func (a Address) Hash() Hash    { return BytesToHash(a[:]) }
+func (a Address) AddressToByte32() ([32]byte){
+	var byteArr [32]byte
+	for i := 0; i < AddressLength ; i++{
+		byteArr[31 - i] = a[AddressLength - 1 - i]
+ 	}
+ 	return  byteArr
+}
 
 // Hex returns an EIP55-compliant hex string representation of the address.
 func (a Address) Hex() string {

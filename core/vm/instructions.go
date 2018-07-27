@@ -40,6 +40,27 @@ var (
 	errMaxCodeSizeExceeded   = errors.New("evm: max code size exceeded")
 )
 
+
+type byte32 [32]byte
+
+func BigToByte32(b *big.Int) byte32  {
+	var a byte32
+	a.SetBytes(b.Bytes())
+	return a
+	}
+
+func (a *byte32) SetBytes(b []byte) {
+	if len(b) > len(a) {
+		b = b[len(b)-32:]
+	}
+	copy(a[32-len(b):], b)
+}
+
+func (a *byte32) Bytes() ([]byte){
+	return a[:]
+}
+
+
 func opAdd(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 	x, y := stack.pop(), stack.peek()
 	math.U256(y.Add(x, y))
@@ -500,13 +521,10 @@ func opDataVerisonRead(pc *uint64, evm *EVM, contract *Contract, memory *Memory,
 	//var int11 *hexutil.Big
 	var fileIdArr [32]byte
 	var retByte []byte
-	retByte = make([]byte, length)
+	retByte = make([]byte, 0)
 	math.U256(fileId)
 	math.U256(dataVersion)
-	byteArr := (fileId).Bytes()
-	for i,v :=range byteArr{
-		fileIdArr[i] = v
-	}
+	fileIdArr = BigToByte32(fileId)
 	///addressArr.Bytes()
 	//binary.BigEndian.PutUint64(retByte,int11.ToInt().Uint64())
 	//txLog,err = evm.StateDB.TxLogByDataVersionRead(common.BigToAddress(address),fileIdArr,strconv.FormatInt(dataVersion.Int64(),10)) //is not dataVersion.String()
@@ -531,8 +549,11 @@ func opDataVerisonRead(pc *uint64, evm *EVM, contract *Contract, memory *Memory,
 	}
 	i = 0
 	for i < 8 {
-		retByte = append(retByte,addressArr[i].Big().Bytes()...)
-		retByte = append(retByte,new(big.Int).SetUint64(intArr[i]).Bytes()...)
+		var byteArr byte32
+		byteArr = addressArr[i].AddressToByte32()
+		retByte = append(retByte,byteArr.Bytes()...)
+		byteArr = BigToByte32(new(big.Int).SetUint64(intArr[i]))
+		retByte = append(retByte,byteArr.Bytes()...)
 		i++
 	}
 	memory.Set(offset.Uint64(),length,retByte)
@@ -546,10 +567,7 @@ func opDataVerisonUpdate(pc *uint64, evm *EVM, contract *Contract, memory *Memor
 	//fileId := string(memory.Get(offset.Int64(),size.Int64()))
 	var fileIdArr [32]byte
 	math.U256(fileId)
-	byteArr := (fileId).Bytes()
-	for i,v :=range byteArr{
-		fileIdArr[i] = v
-	}
+	fileIdArr = BigToByte32(fileId)
 	ret := evm.StateDB.TxLogBydataVersionUpdate(common.BigToAddress(address),fileIdArr)
 	if ret == true{
 		stack.push(evm.interpreter.intPool.get().SetUint64(1))
@@ -585,10 +603,7 @@ func opStorageGasprice(pc *uint64, evm *EVM, contract *Contract, memory *Memory,
 	//bucketId := string(memory.Get(offset.Int64(),size.Int64()))
 	var bucketIdArr [32]byte
 	math.U256(bucketId)
-	byteArr := (bucketId).Bytes()
-	for i,v :=range byteArr{
-		bucketIdArr[i] = v
-	}
+	bucketIdArr = BigToByte32(bucketId)
 	storageGasPrice,err := evm.StateDB.GetStorageGasPrice(common.BigToAddress(address),bucketIdArr)
 	if err == nil {
 		stack.push(evm.interpreter.intPool.get().SetUint64(storageGasPrice))
@@ -642,10 +657,7 @@ func opStorageGasUsed(pc *uint64, evm *EVM, contract *Contract, memory *Memory, 
 	//bucketId := string(memory.Get(offset.Int64(),size.Int64()))
 	var bucketIdArr [32]byte
 	math.U256(bucketId)
-	byteArr := (bucketId).Bytes()
-	for i,v :=range byteArr{
-		bucketIdArr[i] = v
-	}
+	bucketIdArr = BigToByte32(bucketId)
 	storageGasUsed,err := evm.StateDB.GetStorageGasUsed(common.BigToAddress(address),bucketIdArr)
 	if err == nil {
 		stack.push(evm.interpreter.intPool.get().SetUint64(storageGasUsed))
@@ -761,10 +773,7 @@ func opSsize(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stack *St
 	//bucketId := string(memory.Get(offset.Int64(),size.Int64()))
 	var bucketIdArr [32]byte
 	math.U256(bucketId)
-	byteArr := (bucketId).Bytes()
-	for i,v :=range byteArr{
-		bucketIdArr[i] = v
-	}
+	bucketIdArr = BigToByte32(bucketId)
 	sSize,err := evm.StateDB.GetStorageSize(common.BigToAddress(address),bucketIdArr)
 	if err == nil {
 		stack.push(evm.interpreter.intPool.get().SetUint64(sSize))
@@ -787,10 +796,7 @@ func opStorageGas(pc *uint64, evm *EVM, contract *Contract, memory *Memory, stac
 	//bucketId := string(memory.Get(offset.Int64(),size.Int64()))
 	var bucketIdArr [32]byte
 	math.U256(bucketId)
-	byteArr := (bucketId).Bytes()
-	for i,v :=range byteArr{
-		bucketIdArr[i] = v
-	}
+	bucketIdArr = BigToByte32(bucketId)
 	storageGas,err := evm.StateDB.GetStorageGas(common.BigToAddress(address),bucketIdArr)
 	if err == nil {
 		stack.push(evm.interpreter.intPool.get().SetUint64(storageGas))
