@@ -18,6 +18,7 @@ type SpecialTxInput struct {
 	BlockNumber string       `json:"blockNr"`
 	Message     string       `json:"msg"`
 	Sign        string       `json:"sign"`
+	AddCoin	*hexutil.Big `json:"addCoin"`
 	GenaroPrice
 }
 
@@ -27,6 +28,14 @@ type GenaroPrice struct {
 	StakeValuePerNode *hexutil.Big `json:"stakeValuePerNode"`
 	OneDayMortgageGes	*hexutil.Big `json:"oneDayMortgageGes"`
 	OneDaySyncLogGsaCost  *hexutil.Big `json:"oneDaySyncLogGsaCost"`
+	MaxBinding	uint64	`json:"MaxBinding"`	// 一个主节点最大的绑定数量
+	MinStake	uint64	`json:"MinStake"`	// 一次最小的押注额度
+	CommitteeMinStake	uint64	`json:"CommitteeMinStake"`	// 进入委员会需要的最小stake
+	BackStackListMax	uint64	`json:"BackStackListMax"`	// 最大退注长度
+	CoinRewardsRatio	uint64	`json:"CoinRewardsRatio"`	// 币息收益比率
+	StorageRewardsRatio	uint64	`json:"StorageRewardsRatio"`	// 存储收益比率
+	RatioPerYear	uint64	`json:"RatioPerYear"`	// 年收益比率
+	SynStateAccount	string	`json:"SynStateAccount"`	// 区块同步信号的发送地址
 	ExtraPrice     []byte   `json:"extraPrice"` //该版本用不上，考虑后期版本兼容性使用
 }
 
@@ -244,4 +253,39 @@ func (bindingTable *BindingTable) UpdateBinding(mainAccount,subAccount common.Ad
 		bindingTable.MainAccounts[mainAccount] = []common.Address{subAccount}
 	}
 	bindingTable.SubAccounts[subAccount] = mainAccount
+}
+
+// 禁止退注的列表
+type ForbidBackStakeList []common.Address
+
+func (forbidList *ForbidBackStakeList) Add(addr common.Address) {
+	*forbidList = append(*forbidList,addr)
+}
+
+func (forbidList *ForbidBackStakeList) Del(addr common.Address) {
+	for i,addrIn := range *forbidList {
+		if bytes.Compare(addrIn.Bytes(),addr.Bytes()) == 0 {
+			(*forbidList) = append((*forbidList)[:i],(*forbidList)[i+1:]...)
+		}
+	}
+}
+
+func (forbidList *ForbidBackStakeList)IsExist(addr common.Address) bool{
+	for _,addrIn := range *forbidList {
+		if bytes.Compare(addrIn.Bytes(),addr.Bytes()) == 0 {
+			return true
+		}
+	}
+	return false
+}
+
+// 收益计算中间值
+type RewardsValues struct {
+	CoinActualRewards *big.Int	`json:"CoinActualRewards"`
+	PreCoinActualRewards *big.Int	`json:"PreCoinActualRewards"`
+	StorageActualRewards *big.Int	`json:"StorageActualRewards"`
+	PreStorageActualRewards *big.Int	`json:"PreStorageActualRewards"`
+	TotalActualRewards *big.Int	`json:"TotalActualRewards"`
+	SurplusCoin *big.Int	`json:"SurplusCoin"`
+	PreSurplusCoin *big.Int	`json:"PreSurplusCoin"`
 }

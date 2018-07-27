@@ -37,7 +37,7 @@ var (
 
 var (
 	//官方账号
-	OfficialAddress Address  = HexToAddress("0x3f70180da635e0205525106632bf1689ea1f7a84")
+	OfficialAddress Address  = HexToAddress("0xad188b762f9e3ef76c972960b80c9dc99b9cfc73")
 )
 
 /*
@@ -76,9 +76,12 @@ var (
 	// 父子账号的绑定表
 	BindingSaveAddress Address = HexToAddress("0x8000000000000000000000000000000000000000")
 
+	// 存放禁止退注的名单
+	ForbidBackStakeSaveAddress Address = HexToAddress("0x9000000000000000000000000000000000000000")
+
 )
 
-var SpecialAddressList = []Address{CandidateSaveAddress, BackStakeAddress, LastSynStateSaveAddress, StakeNode2StakeAddress, GenaroPriceAddress, SpecialSyncAddress, RewardsSaveAddress, BindingSaveAddress}
+var SpecialAddressList = []Address{CandidateSaveAddress, BackStakeAddress, LastSynStateSaveAddress, StakeNode2StakeAddress, GenaroPriceAddress, SpecialSyncAddress, RewardsSaveAddress, BindingSaveAddress, ForbidBackStakeSaveAddress}
 
 
 
@@ -132,17 +135,18 @@ var (
 	// 解除账号的绑定关系
 	SpecialTxAccountCancelBinding = big.NewInt(17)
 
+	// 禁止退注用户的增减
+	SpecialTxAddAccountInForbidBackStakeList = big.NewInt(18)
+	SpecialTxDelAccountInForbidBackStakeList = big.NewInt(19)
+
 	//解锁分享秘钥
 	UnlockSharedKey = big.NewInt(20)
+
+	// 设置全局变量
+	SpecialTxSetGlobalVar = big.NewInt(21)
+	// 增加币池的交易
+	SpecialTxAddCoinpool = big.NewInt(22)
 )
-
-
-
-
-	var Base = uint64(100000)	// 收益计算中间值
-	var BackStackListMax = int(20)		// 最大退注长度
-
-
 
 	//特殊交易 Tx.init 格式
 	//其中 allow 中的权限如下
@@ -155,10 +159,19 @@ var (
 
 	// 同步交易的块间隔
 	var SynBlockLen = uint64(6)
+	// 退注周期
+	var BackStakePeriod = uint64(5)
+	var Base = uint64(100000)	// 收益计算中间值
 
-	// 一个主节点最大的绑定数量
-	var MaxBinding = 10
-	// 一次最小的押注额度
-	var MinStake = uint64(5000)
-	// 进入委员会需要的最小stake
-	var CommitteeMinStake = uint64(5000)
+	// 可变更的全局变量
+	var (
+		MaxBinding = uint64(10)	// 一个主节点最大的绑定数量
+		MinStake = uint64(5000)	// 一次最小的押注额度
+		CommitteeMinStake = uint64(5000)		// 进入委员会需要的最小stake
+		BackStackListMax = uint64(20)	// 最大退注长度
+		CoinRewardsRatio = uint64(50)	// 币息收益比率
+		StorageRewardsRatio = uint64(50)	// 存储收益比率
+		RatioPerYear = uint64(7)	// 年收益比率
+		SynStateAccount = OfficialAddress	// 区块同步信号的发送地址
+	)
+

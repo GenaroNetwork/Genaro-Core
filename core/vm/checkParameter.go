@@ -124,7 +124,8 @@ func CheckStakeTx(s types.SpecialTxInput, state StateDB) error {
 		return errors.New("param [address] can't be special address")
 	}
 
-	if s.Stake < common.MinStake {
+	genaroPrice := state.GetGenaroPrice()
+	if s.Stake < genaroPrice.MinStake {
 		return errors.New("value of stake must larger than MinStake")
 	}
 
@@ -217,7 +218,7 @@ func CheckSyncNodeTx(caller common.Address, s types.SpecialTxInput, db StateDB) 
 	//get publickey
 	pubKey := crypto.CompressPubkey(recoveredPub)
 
-
+	//log.Info(fmt.Sprintf("publicKey:%x", pubKey))
 	genNodeID := generateNodeId(pubKey)
 	//log.Info(fmt.Sprintf("genNodeId:%s", genNodeID))
 	//log.Info(fmt.Sprintf("s.nodeId:%s", s.NodeID))
@@ -235,7 +236,10 @@ func CheckSyncNodeTx(caller common.Address, s types.SpecialTxInput, db StateDB) 
 
 	currentStake := new(big.Int).Mul(new(big.Int).SetUint64(stake), common.BaseCompany)
 
-	if needStakeVale.Cmp(currentStake) != 1 {
+	//log.Info(fmt.Sprintf("currentStake:%s", currentStake.String()))
+	//log.Info(fmt.Sprintf("needStakeVale:%s", needStakeVale.String()))
+
+	if needStakeVale.Cmp(currentStake) == 1 {
 		return errors.New("none enough stake to synchronize node")
 	}
 	return nil
@@ -268,7 +272,8 @@ func CheckBackStakeTx(caller common.Address, state StateDB) error {
 	if !ok {
 		return errors.New("userBackStake fail")
 	}
-	if len(backStakeList) > common.BackStackListMax {
+	genaroPrice := state.GetGenaroPrice()
+	if len(backStakeList) > int(genaroPrice.BackStackListMax) {
 		return errors.New("BackStackList too long")
 	}
 	// 判断是否是绑定用户
@@ -279,11 +284,17 @@ func CheckBackStakeTx(caller common.Address, state StateDB) error {
 	if state.IsAlreadyBackStake(caller) {
 		return errors.New("account in back stake list")
 	}
+	// 判断账号是否在禁止退注的名单中
+	if state.IsAccountExistInForbidBackStakeList(caller) {
+		return errors.New("account in forbid backstake list")
+	}
 	return nil
 }
 
-func CheckSynStateTx(caller common.Address) error {
-	if caller !=  common.OfficialAddress {
+func CheckSynStateTx(caller common.Address, state StateDB) error {
+	genaroPrice := state.GetGenaroPrice()
+	synStateAccount := common.HexToAddress(genaroPrice.SynStateAccount)
+	if caller != synStateAccount {
 		return errors.New("caller address of this transaction is not invalid")
 	}
 	return nil
@@ -340,12 +351,16 @@ func CheckAccountBindingTx(caller common.Address,s types.SpecialTxInput, state S
 	mainAccount := common.HexToAddress(s.Address)
 	// 子账号
 	subAccount := common.HexToAddress(s.Message)
+	if bytes.EqualFold(mainAccount.Bytes(),subAccount.Bytes()) {
+		return errors.New("same account")
+	}
 	// 主账号是否是候选者
 	if !state.IsCandidateExist(mainAccount) {
 		return errors.New("mainAddr is not a candidate")
 	}
 	// 主账号绑定数量是否超出限制
-	if state.GetSubAccountsCount(mainAccount) > common.MaxBinding {
+	genaroPrice := state.GetGenaroPrice()
+	if state.GetSubAccountsCount(mainAccount) > int(genaroPrice.MaxBinding) {
 		return errors.New("binding enough")
 	}
 	// 绑定的子账号是否已经是一个主账号
@@ -394,5 +409,68 @@ func CheckAccountCancelBindingTx(caller common.Address,s types.SpecialTxInput, s
 		err = errors.New("not binding account")
 	}
 	return
+}
+
+// 添加禁止退注名单的交易检查
+func CheckAddAccountInForbidBackStakeListTx(caller common.Address,s types.SpecialTxInput, state StateDB) error{
+	// 检查是否是官方账号
+	if caller !=  common.OfficialAddress {
+		return errors.New("caller address of this transaction is not invalid")
+	}
+	account := common.HexToAddress(s.Address)
+	// 检查账号是否有押注
+	stake,err := state.GetStake(account)
+	if err != nil {
+		return err
+	}
+	if stake == 0 {
+		return errors.New("account stake is zero")
+	}
+	// 判断是否已经在禁止名单中
+	if state.IsAccountExistInForbidBackStakeList(account) {
+		return errors.New("account is in forbid list")
+	}
+	return nil
+}
+
+// 移除退注账号禁止名单的检查
+func CheckDelAccountInForbidBackStakeListTx(caller common.Address,s types.SpecialTxInput, state StateDB) error {
+	// 检查是否是官方账号
+	if caller !=  common.OfficialAddress {
+		return errors.New("caller address of this transaction is not invalid")
+	}
+	account := common.HexToAddress(s.Address)
+	// 检查账号是否在禁止名单中
+	ok := state.IsAccountExistInForbidBackStakeList(account)
+	if !ok {
+		return errors.New("account is not in forbid list")
+	}
+	return nil
+}
+
+// 设置全局变量交易参数检查
+func CheckSetGlobalVar(caller common.Address,s types.SpecialTxInput) error {
+	// 检查是否是官方账号
+	if caller !=  common.OfficialAddress {
+		return errors.New("caller address of this transaction is not invalid")
+	}
+
+	if s.RatioPerYear >= 100 || s.CoinRewardsRatio >= 100 || s.StorageRewardsRatio >= 100{
+		return errors.New("Ratio is not invalid")
+	}
+
+	return nil
+}
+
+// 增加币池的检查
+func CheckAddCoinpool(caller common.Address,s types.SpecialTxInput, state StateDB) error {
+	balance := state.GetBalance(caller)
+	if s.AddCoin.ToInt().Cmp(big.NewInt(0)) <= 0 {
+		return errors.New("Value is not invalid")
+	}
+	if balance.Cmp(s.AddCoin.ToInt()) < 0 {
+		return errors.New("Balance is not enough")
+	}
+	return nil
 }
 

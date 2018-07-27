@@ -164,7 +164,11 @@ func (c CandidateInfos) Apply() {
 	}
 	//TODO define how to get point
 	for i, candidate := range c{
-		c[i].Point = candidate.Stake*common.Base/totleStake + candidate.Heft*common.Base/totleHeft
+		if candidate.Heft == 0 {
+			c[i].Point = 0
+		} else {
+			c[i].Point = candidate.Stake*common.Base/totleStake + candidate.Heft*common.Base/totleHeft
+		}
 	}
 }
 
@@ -189,11 +193,11 @@ func Rank(candidateInfos CandidateInfos) ([]common.Address, []uint64){
 }
 
 // 限制排名的长度后，进行排名
-func RankWithLenth(candidateInfos CandidateInfos, lenth int) ([]common.Address, []uint64){
+func RankWithLenth(candidateInfos CandidateInfos, lenth int, committeeMinStake uint64) ([]common.Address, []uint64){
 	candidateInfos.Apply()
 	// 除去低于stake最小限制的账号
 	for i:=0;i<len(candidateInfos);i++ {
-		if candidateInfos[i].Stake < common.CommitteeMinStake {
+		if candidateInfos[i].Stake < committeeMinStake {
 			candidateInfos = append(candidateInfos[:i],candidateInfos[i+1:]...)
 			i--
 		}
@@ -711,16 +715,17 @@ func (self *stateObject) DelCandidate(candidate common.Address) {
 		json.Unmarshal(self.data.CodeHash, &candidates)
 	}
 
-	candidates.DelCandidate(candidate)
-	b, _ := json.Marshal(candidates)
-	self.code = nil
-	self.data.CodeHash = b[:]
-	self.dirtyCode = true
-	if self.onDirty != nil {
-		self.onDirty(self.Address())
-		self.onDirty = nil
+	if candidates.isExist(candidate) {
+		candidates.DelCandidate(candidate)
+		b, _ := json.Marshal(candidates)
+		self.code = nil
+		self.data.CodeHash = b[:]
+		self.dirtyCode = true
+		if self.onDirty != nil {
+			self.onDirty(self.Address())
+			self.onDirty = nil
+		}
 	}
-
 }
 
 func (self *stateObject)GetCandidates() (Candidates){
@@ -731,6 +736,72 @@ func (self *stateObject)GetCandidates() (Candidates){
 	}
 	return nil
 }
+
+// 将账号加入禁止退注列表
+func (self *stateObject) AddAccountInForbidBackStakeList(addr common.Address) {
+	var forbidList types.ForbidBackStakeList
+	if self.data.CodeHash == nil{
+		forbidList = *new(types.ForbidBackStakeList)
+	}else {
+		json.Unmarshal(self.data.CodeHash, &forbidList)
+	}
+	if !forbidList.IsExist(addr) {
+		forbidList.Add(addr)
+		b, _ := json.Marshal(forbidList)
+		self.code = nil
+		self.data.CodeHash = b[:]
+		self.dirtyCode = true
+		if self.onDirty != nil {
+			self.onDirty(self.Address())
+			self.onDirty = nil
+		}
+	}
+}
+
+// 判断账号是否存在于禁止退注列表中
+func (self *stateObject) IsAccountExistInForbidBackStakeList(addr common.Address) bool{
+	var forbidList types.ForbidBackStakeList
+	if self.data.CodeHash == nil{
+		forbidList = *new(types.ForbidBackStakeList)
+	}else {
+		json.Unmarshal(self.data.CodeHash, &forbidList)
+	}
+
+	return forbidList.IsExist(addr)
+}
+
+// 将账号从禁止退注名单中删除
+func (self *stateObject) DelAccountInForbidBackStakeList(addr common.Address) {
+	var forbidList types.ForbidBackStakeList
+	if self.data.CodeHash == nil{
+		forbidList = *new(types.ForbidBackStakeList)
+	}else {
+		json.Unmarshal(self.data.CodeHash, &forbidList)
+	}
+
+	if forbidList.IsExist(addr) {
+		forbidList.Del(addr)
+		b, _ := json.Marshal(forbidList)
+		self.code = nil
+		self.data.CodeHash = b[:]
+		self.dirtyCode = true
+		if self.onDirty != nil {
+			self.onDirty(self.Address())
+			self.onDirty = nil
+		}
+	}
+}
+
+// 获取禁止退注名单
+func (self *stateObject)GetForbidBackStakeList() (types.ForbidBackStakeList){
+	if self.data.CodeHash != nil {
+		var forbidList types.ForbidBackStakeList
+		json.Unmarshal(self.data.CodeHash, &forbidList)
+		return forbidList
+	}
+	return nil
+}
+
 
 func (self *stateObject) AddAlreadyBackStack(backStake common.AlreadyBackStake) {
 	var backStakes common.BackStakeList
@@ -1549,6 +1620,17 @@ func (self *stateObject)GetGenaroPrice() *types.GenaroPrice {
 	return nil
 }
 
+func (self *stateObject)SetGenaroPrice(genaroPrice types.GenaroPrice) {
+	b, _ := json.Marshal(genaroPrice)
+	self.code = nil
+	self.data.CodeHash = b[:]
+	self.dirtyCode = true
+	if self.onDirty != nil {
+		self.onDirty(self.Address())
+		self.onDirty = nil
+	}
+}
+
 
 func (self *stateObject)UpdateOneDayGesCost(price *hexutil.Big) {
 	var genaroPrice types.GenaroPrice
@@ -1669,3 +1751,25 @@ func (self *stateObject)UbindNode2Address(nodeId string) error{
 	}
 	return nil
 }
+
+func (self *stateObject)GetRewardsValues() *types.RewardsValues {
+	var rewardsValues types.RewardsValues
+	if self.data.CodeHash == nil {
+		return nil
+	}else{
+		json.Unmarshal(self.data.CodeHash, &rewardsValues)
+	}
+	return &rewardsValues
+}
+
+func (self *stateObject)SetRewardsValues(rewardsValues types.RewardsValues) {
+	b, _ := json.Marshal(rewardsValues)
+	self.code = nil
+	self.data.CodeHash = b[:]
+	self.dirtyCode = true
+	if self.onDirty != nil {
+		self.onDirty(self.Address())
+		self.onDirty = nil
+	}
+}
+

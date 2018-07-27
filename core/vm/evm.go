@@ -253,7 +253,7 @@ func dispatchHandler(evm *EVM, caller common.Address, input []byte) error{
 		err = userBackStake(evm, caller)
 	case common.SpecialTxTypePriceRegulation.Uint64(): //价格调整
 		err = genaroPriceRegulation(evm, s, caller)
-	case common.SpecialTxSynState.Uint64():
+	case common.SpecialTxSynState.Uint64():	// 同步信号
 		err = SynState(evm, s, caller)
 	case common.SpecialTxUnbindNode.Uint64(): //解除绑定
 		err = unbindNode(evm, s, caller)
@@ -261,6 +261,14 @@ func dispatchHandler(evm *EVM, caller common.Address, input []byte) error{
 		err = accountBinding(evm, s, caller)
 	case common.SpecialTxAccountCancelBinding.Uint64(): // 账号解除绑定
 		err = accountCancelBinding(evm, s, caller)
+	case common.SpecialTxAddAccountInForbidBackStakeList.Uint64(): // 加入禁止退注名单
+		err = addAccountInForbidBackStakeList(evm, s, caller)
+	case common.SpecialTxDelAccountInForbidBackStakeList.Uint64(): // 移除禁止退注名单
+		err = delAccountInForbidBackStakeList(evm, s, caller)
+	case common.SpecialTxSetGlobalVar.Uint64():	// 设置全局变量
+		err = setGlobalVar(evm, s, caller)
+	case common.SpecialTxAddCoinpool.Uint64():	// 增加币池
+		err = addCoinpool(evm, s, caller)
 	default:
 		err = errors.New("undefined type of special transaction")
 	}
@@ -269,6 +277,30 @@ func dispatchHandler(evm *EVM, caller common.Address, input []byte) error{
 		log.Info("special transaction error: ", err)
 	}
 	return err
+}
+
+func delAccountInForbidBackStakeList(evm *EVM, s types.SpecialTxInput, caller common.Address) error {
+	if err := CheckDelAccountInForbidBackStakeListTx(caller, s, (*evm).StateDB); err != nil {
+		return err
+	}
+	account := common.HexToAddress(s.Address)
+	ok := (*evm).StateDB.DelAccountInForbidBackStakeList(account)
+	if !ok {
+		return errors.New("Delete Account In Forbid BackStake List failed")
+	}
+	return nil
+}
+
+func addAccountInForbidBackStakeList(evm *EVM, s types.SpecialTxInput, caller common.Address) error {
+	if err := CheckAddAccountInForbidBackStakeListTx(caller, s, (*evm).StateDB); err != nil {
+		return err
+	}
+	account := common.HexToAddress(s.Address)
+	ok := (*evm).StateDB.AddAccountInForbidBackStakeList(account)
+	if !ok {
+		return errors.New("Add Account In Forbid BackStake List failed")
+	}
+	return nil
 }
 
 func unbindNode(evm *EVM, s types.SpecialTxInput, caller common.Address) error {
@@ -385,8 +417,59 @@ func genaroPriceRegulation(evm *EVM, s types.SpecialTxInput, caller common.Addre
 	return nil
 }
 
+func addCoinpool(evm *EVM, s types.SpecialTxInput, caller common.Address) error{
+	if err := CheckAddCoinpool(caller, s, (*evm).StateDB); err != nil {
+		return err
+	}
+	rewardsValues := (*evm).StateDB.GetRewardsValues()
+	rewardsValues.SurplusCoin.Add(rewardsValues.SurplusCoin,s.AddCoin.ToInt())
+	ok := (*evm).StateDB.SetRewardsValues(*rewardsValues)
+	if ok {
+		(*evm).StateDB.SubBalance(caller, s.AddCoin.ToInt())
+		return nil
+	}
+	return errors.New("addCoinpool fail")
+}
+
+func setGlobalVar(evm *EVM, s types.SpecialTxInput, caller common.Address) error{
+	if err := CheckSetGlobalVar(caller, s); err != nil {
+		return err
+	}
+	genaroPrice := (*evm).StateDB.GetGenaroPrice()
+	if s.StorageRewardsRatio != 0 {
+		genaroPrice.StorageRewardsRatio = s.StorageRewardsRatio
+	}
+	if s.CoinRewardsRatio != 0 {
+		genaroPrice.CoinRewardsRatio = s.CoinRewardsRatio
+	}
+	if s.RatioPerYear != 0 {
+		genaroPrice.RatioPerYear = s.RatioPerYear
+	}
+	if s.BackStackListMax != 0 {
+		genaroPrice.BackStackListMax = s.BackStackListMax
+	}
+	if s.CommitteeMinStake != 0 {
+		genaroPrice.CommitteeMinStake = s.CommitteeMinStake
+	}
+	if s.MinStake != 0 {
+		genaroPrice.MinStake = s.MinStake
+	}
+	if s.MaxBinding != 0 {
+		genaroPrice.MaxBinding = s.MaxBinding
+	}
+	if len(s.SynStateAccount) > 0 {
+		genaroPrice.SynStateAccount = s.SynStateAccount
+	}
+
+	ok := (*evm).StateDB.SetGenaroPrice(*genaroPrice)
+	if !ok {
+		return errors.New("setGlobalVar fail")
+	}
+	return nil
+}
+
 func SynState(evm *EVM, s types.SpecialTxInput,caller common.Address) error {
-	err := CheckSynStateTx(caller)
+	err := CheckSynStateTx(caller, (*evm).StateDB)
 	if err != nil {
 		return err
 	}

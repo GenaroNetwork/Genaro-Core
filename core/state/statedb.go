@@ -1290,6 +1290,15 @@ func (self *StateDB)GetGenaroPrice() *types.GenaroPrice {
 
 }
 
+func (self *StateDB)SetGenaroPrice(genaroPrice types.GenaroPrice) bool {
+	stateObject := self.GetOrNewStateObject(common.GenaroPriceAddress)
+	if stateObject != nil {
+		stateObject.SetGenaroPrice(genaroPrice)
+		return true
+	}
+	return false
+}
+
 func (self *StateDB)GetLastSynState() *types.LastSynState{
 	stateObject := self.getStateObject(common.LastSynStateSaveAddress)
 	if stateObject != nil {
@@ -1352,4 +1361,54 @@ func (self *StateDB)UbindNode2Address(address common.Address, nodeId string) err
 	return err
 }
 
+func (self *StateDB)AddAccountInForbidBackStakeList(address common.Address) bool {
+	stateObject := self.GetOrNewStateObject(common.ForbidBackStakeSaveAddress)
+	if stateObject != nil {
+		stateObject.AddAccountInForbidBackStakeList(address)
+		return true
+	}
+	return false
+}
+
+func (self *StateDB)DelAccountInForbidBackStakeList(address common.Address) bool {
+	stateObject := self.GetOrNewStateObject(common.ForbidBackStakeSaveAddress)
+	if stateObject != nil {
+		stateObject.DelAccountInForbidBackStakeList(address)
+		return true
+	}
+	return false
+}
+
+func (self *StateDB)IsAccountExistInForbidBackStakeList(address common.Address) bool {
+	stateObject := self.GetOrNewStateObject(common.ForbidBackStakeSaveAddress)
+	if stateObject != nil {
+		return stateObject.IsAccountExistInForbidBackStakeList(address)
+	}
+	return false
+}
+
+func (self *StateDB)GetForbidBackStakeList() types.ForbidBackStakeList {
+	stateObject := self.GetOrNewStateObject(common.ForbidBackStakeSaveAddress)
+	if stateObject != nil {
+		return stateObject.GetForbidBackStakeList()
+	}
+	return nil
+}
+
+func (self *StateDB)GetRewardsValues() *types.RewardsValues {
+	stateObject := self.GetOrNewStateObject(common.RewardsSaveAddress)
+	if stateObject != nil {
+		return stateObject.GetRewardsValues()
+	}
+	return nil
+}
+
+func (self *StateDB)SetRewardsValues(rewardsValues types.RewardsValues) bool{
+	stateObject := self.GetOrNewStateObject(common.RewardsSaveAddress)
+	if stateObject != nil {
+		stateObject.SetRewardsValues(rewardsValues)
+		return true
+	}
+	return false
+}
 

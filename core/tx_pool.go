@@ -595,7 +595,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	currentPrice := pool.currentState.GetGenaroPrice()
 
 	totalCost := new(big.Int).Add(tx.Cost(), tx.SpecialCost(currentPrice))
-	log.Info(fmt.Sprintf("total cost:%s", totalCost.String()))
+	//log.Info(fmt.Sprintf("total cost:%s", totalCost.String()))
 	if pool.currentState.GetBalance(from).Cmp(totalCost) < 0 {
 		return ErrInsufficientFundsForSpecialTx
 	}
@@ -649,7 +649,7 @@ func (pool *TxPool)dispatchHandlerValidateTx(input []byte, caller common.Address
 	case common.SpecialTxTypePriceRegulation.Uint64(): //价格调整
 		return vm.CheckPriceRegulation(caller, s)
 	case common.SpecialTxSynState.Uint64():
-		return vm.CheckSynStateTx(caller)
+		return vm.CheckSynStateTx(caller, pool.currentState)
 	case common.SpecialTxUnbindNode.Uint64(): //解除绑定
 		existNodes := pool.currentState.GetStorageNodes(caller)
 		return vm.CheckUnbindNodeTx(caller, s, existNodes)
@@ -658,6 +658,14 @@ func (pool *TxPool)dispatchHandlerValidateTx(input []byte, caller common.Address
 	case common.SpecialTxAccountCancelBinding.Uint64(): // 账号解除绑定
 		_,err := vm.CheckAccountCancelBindingTx(caller, s, pool.currentState)
 		return err
+	case common.SpecialTxAddAccountInForbidBackStakeList.Uint64():
+		return vm.CheckAddAccountInForbidBackStakeListTx(caller, s, pool.currentState)
+	case common.SpecialTxDelAccountInForbidBackStakeList.Uint64():
+		return vm.CheckDelAccountInForbidBackStakeListTx(caller, s, pool.currentState)
+	case common.SpecialTxSetGlobalVar.Uint64():
+		return vm.CheckSetGlobalVar(caller, s)
+	case common.SpecialTxAddCoinpool.Uint64():
+		return vm.CheckAddCoinpool(caller, s, pool.currentState)
 
 	}
 	return errors.New("undefined type of special transaction")
