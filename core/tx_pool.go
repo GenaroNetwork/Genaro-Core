@@ -607,8 +607,10 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	if tx.Gas() < intrGas {
 		return ErrIntrinsicGas
 	}
-	if common.SpecialSyncAddress == *tx.To(){
-		return pool.dispatchHandlerValidateTx(tx.Data(), from)
+	if nil != tx.To() {
+		if common.SpecialSyncAddress == *tx.To(){
+			return pool.dispatchHandlerValidateTx(tx.Data(), from)
+		}
 	}
 	return nil
 }
@@ -621,6 +623,11 @@ func (pool *TxPool)dispatchHandlerValidateTx(input []byte, caller common.Address
 	if err != nil{
 		return errors.New("special tx error： the extraData parameters of the wrong format")
 	}
+
+	if nil == s.Type {
+		return errors.New("special tx error: miss param [type]")
+	}
+
 	switch s.Type.ToInt().Uint64(){
 	case common.SpecialTxTypeStakeSync.Uint64(): // 同步stake
 		return vm.CheckStakeTx(s, pool.currentState)
