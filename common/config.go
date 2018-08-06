@@ -79,6 +79,9 @@ var (
 	// 存放禁止退注的名单
 	ForbidBackStakeSaveAddress Address = HexToAddress("0x9000000000000000000000000000000000000000")
 
+	// 存放restores账户信息
+	RestoresAccountSaveAddress Address = HexToAddress("0x110000000000000000000000000000000000000")
+
 )
 
 var SpecialAddressList = []Address{CandidateSaveAddress, BackStakeAddress, LastSynStateSaveAddress, StakeNode2StakeAddress, GenaroPriceAddress, SpecialSyncAddress, RewardsSaveAddress, BindingSaveAddress, ForbidBackStakeSaveAddress}

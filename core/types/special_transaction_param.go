@@ -290,3 +290,18 @@ type RewardsValues struct {
 	SurplusCoin *big.Int	`json:"SurplusCoin"`
 	PreSurplusCoin *big.Int	`json:"PreSurplusCoin"`
 }
+
+// restores account list
+type RestoresAccountList []common.Address
+
+func (restoresAccounts *RestoresAccountList) Add(addr common.Address) {
+	*restoresAccounts = append(*restoresAccounts, addr)
+}
+
+func (restoresAccounts *RestoresAccountList) Del(addr common.Address) {
+	for i,addrIn := range *restoresAccounts {
+		if bytes.Compare(addrIn.Bytes(),addr.Bytes()) == 0 {
+			*restoresAccounts = append((*restoresAccounts)[:i],(*restoresAccounts)[i+1:]...)
+		}
+	}
+}

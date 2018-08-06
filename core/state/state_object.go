@@ -811,7 +811,6 @@ func (self *stateObject)GetForbidBackStakeList() (types.ForbidBackStakeList){
 	return nil
 }
 
-
 func (self *stateObject) AddAlreadyBackStack(backStake common.AlreadyBackStake) {
 	var backStakes common.BackStakeList
 	if self.data.CodeHash == nil{
@@ -1836,4 +1835,15 @@ func (self *stateObject)AddRestores(amount *big.Int) {
 
 func  (self *stateObject)SubRestores(amount *big.Int) {
 	self.SetRestores(new(big.Int).Sub(self.GetRestores(),amount))
+}
+
+
+// 获取Restores名单
+func (self *stateObject)GetRestoresAccountList() (types.RestoresAccountList){
+	if self.data.CodeHash != nil {
+		var restoresAccountList types.RestoresAccountList
+		json.Unmarshal(self.data.CodeHash, &restoresAccountList)
+		return restoresAccountList
+	}
+	return nil
 }
