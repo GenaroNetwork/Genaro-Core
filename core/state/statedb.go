@@ -1412,3 +1412,34 @@ func (self *StateDB)SetRewardsValues(rewardsValues types.RewardsValues) bool{
 	return false
 }
 
+// AddRestores adds amount to the account associated with addr
+func (self *StateDB) AddRestores(addr common.Address, amount *big.Int) {
+	stateObject := self.GetOrNewStateObject(addr)
+	if stateObject != nil {
+		stateObject.AddRestores(amount)
+	}
+}
+
+// SubRestores subtracts amount from the account associated with addr
+func (self *StateDB) SubRestores(addr common.Address, amount *big.Int) {
+	stateObject := self.GetOrNewStateObject(addr)
+	if stateObject != nil {
+		stateObject.SubRestores(amount)
+	}
+}
+
+func (self *StateDB) SetRestores(addr common.Address, amount *big.Int) {
+	stateObject := self.GetOrNewStateObject(addr)
+	if stateObject != nil {
+		stateObject.SetRestores(amount)
+	}
+}
+
+// Retrieve the balance from the given address or 0 if object not found
+func (self *StateDB) GetRestores(addr common.Address) *big.Int {
+	stateObject := self.getStateObject(addr)
+	if stateObject != nil {
+		return stateObject.GetRestores()
+	}
+	return common.Big0
+}

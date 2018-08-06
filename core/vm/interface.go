@@ -158,6 +158,11 @@ type StateDB interface {
 	GetRewardsValues() *types.RewardsValues
 	SetRewardsValues(rewardsValues types.RewardsValues) bool
 
+
+	SubRestores(common.Address, *big.Int)
+	AddRestores(common.Address, *big.Int)
+	SetRestores(common.Address, *big.Int)
+	GetRestores(common.Address) *big.Int
 }
 
 // CallContext provides a basic interface for the EVM calling conventions. The EVM EVM

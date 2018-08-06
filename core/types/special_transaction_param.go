@@ -94,6 +94,7 @@ func (s SpecialTxInput) SpecialCost(currentPrice *GenaroPrice) big.Int {
 type GenaroData struct {
 	Heft                         uint64                               `json:"heft"`
 	Stake                        uint64                               `json:"stake"`
+	Restores                     *big.Int                             `json:"restores"`
 	HeftLog						 NumLogs						`json:"heftlog"`
 	StakeLog					 NumLogs						`json:"stakelog"`
 	FileSharePublicKey           string                               `json:"publicKey"`

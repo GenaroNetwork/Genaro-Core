@@ -1773,3 +1773,58 @@ func (self *stateObject)SetRewardsValues(rewardsValues types.RewardsValues) {
 	}
 }
 
+func (self *stateObject)GetRestores() *big.Int {
+	if self.data.CodeHash != nil {
+		var genaroData types.GenaroData
+		json.Unmarshal(self.data.CodeHash, &genaroData)
+		return genaroData.Restores
+	}
+	return common.Big0
+}
+
+func (self *stateObject)SetRestores(amount *big.Int) {
+	var genaroData types.GenaroData
+	if self.data.CodeHash == nil{
+		genaroData = types.GenaroData{
+			Restores: amount,
+		}
+	}else {
+		json.Unmarshal(self.data.CodeHash, &genaroData)
+		genaroData.Restores = amount
+	}
+
+	b, _ := json.Marshal(genaroData)
+	self.code = nil
+	self.data.CodeHash = b[:]
+	self.dirtyCode = true
+	if self.onDirty != nil {
+		self.onDirty(self.Address())
+		self.onDirty = nil
+	}
+}
+
+func (self *stateObject)AddRestores(amount *big.Int) {
+	var genaroData types.GenaroData
+	if self.data.CodeHash == nil{
+		genaroData = types.GenaroData{
+			Restores: amount,
+		}
+	}else {
+		json.Unmarshal(self.data.CodeHash, &genaroData)
+		newAmount := new(big.Int).Add(genaroData.Restores, amount)
+		genaroData.Restores = newAmount
+	}
+
+	b, _ := json.Marshal(genaroData)
+	self.code = nil
+	self.data.CodeHash = b[:]
+	self.dirtyCode = true
+	if self.onDirty != nil {
+		self.onDirty(self.Address())
+		self.onDirty = nil
+	}
+}
+
+func  (self *stateObject)SubRestores(amount *big.Int) {
+	self.setBalance(new(big.Int).Sub(self.GetRestores(),amount))
+}
