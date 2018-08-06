@@ -1835,5 +1835,5 @@ func (self *stateObject)AddRestores(amount *big.Int) {
 }
 
 func  (self *stateObject)SubRestores(amount *big.Int) {
-	self.setBalance(new(big.Int).Sub(self.GetRestores(),amount))
+	self.SetRestores(new(big.Int).Sub(self.GetRestores(),amount))
 }
