@@ -1453,7 +1453,7 @@ func (self *StateDB) GetRestores(addr common.Address) *big.Int {
 	return common.Big0
 }
 
-func (self *StateDB)GetRestoresAccountList() types.ForbidBackStakeList {
+func (self *StateDB)GetRestoresAccountList() types.RestoresAccountList {
 	stateObject := self.GetOrNewStateObject(common.RestoresAccountSaveAddress)
 	if stateObject != nil {
 		return stateObject.GetRestoresAccountList()
