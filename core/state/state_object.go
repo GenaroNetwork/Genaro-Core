@@ -1847,3 +1847,46 @@ func (self *stateObject)GetRestoresAccountList() (types.RestoresAccountList){
 	}
 	return nil
 }
+
+
+func (self *stateObject) AddAccountInRestoresAccountList(addr common.Address) {
+	var restoresList types.RestoresAccountList
+	if self.data.CodeHash == nil{
+		restoresList = *new(types.RestoresAccountList)
+	}else {
+		json.Unmarshal(self.data.CodeHash, &restoresList)
+	}
+	if !restoresList.IsExist(addr) {
+		restoresList.Add(addr)
+		b, _ := json.Marshal(restoresList)
+		self.code = nil
+		self.data.CodeHash = b[:]
+		self.dirtyCode = true
+		if self.onDirty != nil {
+			self.onDirty(self.Address())
+			self.onDirty = nil
+		}
+	}
+}
+
+
+func (self *stateObject) DelAccountInRestoresAccountList(addr common.Address) {
+	var restoresList types.RestoresAccountList
+	if self.data.CodeHash == nil{
+		restoresList = *new(types.RestoresAccountList)
+	}else {
+		json.Unmarshal(self.data.CodeHash, &restoresList)
+	}
+
+	if restoresList.IsExist(addr) {
+		restoresList.Del(addr)
+		b, _ := json.Marshal(restoresList)
+		self.code = nil
+		self.data.CodeHash = b[:]
+		self.dirtyCode = true
+		if self.onDirty != nil {
+			self.onDirty(self.Address())
+			self.onDirty = nil
+		}
+	}
+}

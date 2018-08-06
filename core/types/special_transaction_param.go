@@ -305,3 +305,12 @@ func (restoresAccounts *RestoresAccountList) Del(addr common.Address) {
 		}
 	}
 }
+
+func (restoresAccounts *RestoresAccountList)IsExist(addr common.Address) bool{
+	for _,addrIn := range *restoresAccounts {
+		if bytes.Compare(addrIn.Bytes(),addr.Bytes()) == 0 {
+			return true
+		}
+	}
+	return false
+}

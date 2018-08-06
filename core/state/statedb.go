@@ -1460,3 +1460,21 @@ func (self *StateDB)GetRestoresAccountList() types.RestoresAccountList {
 	}
 	return nil
 }
+
+func (self *StateDB)AddAccountInRestoresAccountList(address common.Address) bool {
+	stateObject := self.GetOrNewStateObject(common.RestoresAccountSaveAddress)
+	if stateObject != nil {
+		stateObject.AddAccountInRestoresAccountList(address)
+		return true
+	}
+	return false
+}
+
+func (self *StateDB)DelAccountInRestoresAccountList(address common.Address) bool {
+	stateObject := self.GetOrNewStateObject(common.RestoresAccountSaveAddress)
+	if stateObject != nil {
+		stateObject.DelAccountInRestoresAccountList(address)
+		return true
+	}
+	return false
+}
