@@ -158,6 +158,7 @@ type StateDB interface {
 	GetRewardsValues() *types.RewardsValues
 	SetRewardsValues(rewardsValues types.RewardsValues) bool
 
+	GetAllBalance(common.Address) *big.Int
 
 	SubRestores(common.Address, *big.Int)
 	AddRestores(common.Address, *big.Int)

@@ -1412,6 +1412,15 @@ func (self *StateDB)SetRewardsValues(rewardsValues types.RewardsValues) bool{
 	return false
 }
 
+
+func (self *StateDB) GetAllBalance(addr common.Address) *big.Int {
+	stateObject := self.getStateObject(addr)
+	if stateObject != nil {
+		return new(big.Int).Add(stateObject.GetRestores(), stateObject.Balance())
+	}
+	return common.Big0
+}
+
 // AddRestores adds amount to the account associated with addr
 func (self *StateDB) AddRestores(addr common.Address, amount *big.Int) {
 	stateObject := self.GetOrNewStateObject(addr)
@@ -1435,7 +1444,7 @@ func (self *StateDB) SetRestores(addr common.Address, amount *big.Int) {
 	}
 }
 
-// Retrieve the balance from the given address or 0 if object not found
+// Retrieve the restores from the given address or 0 if object not found
 func (self *StateDB) GetRestores(addr common.Address) *big.Int {
 	stateObject := self.getStateObject(addr)
 	if stateObject != nil {
