@@ -1461,7 +1461,7 @@ func (self *StateDB)GetRestoresAccountList() types.RestoresAccountList {
 	return nil
 }
 
-func (self *StateDB)AddAccountInRestoresAccountList(address common.Address) bool {
+func (self *StateDB)AddAccountInRestoresAccountList(address types.RestoresAccount) bool {
 	stateObject := self.GetOrNewStateObject(common.RestoresAccountSaveAddress)
 	if stateObject != nil {
 		stateObject.AddAccountInRestoresAccountList(address)
@@ -1470,7 +1470,7 @@ func (self *StateDB)AddAccountInRestoresAccountList(address common.Address) bool
 	return false
 }
 
-func (self *StateDB)DelAccountInRestoresAccountList(address common.Address) bool {
+func (self *StateDB)DelAccountInRestoresAccountList(address types.RestoresAccount) bool {
 	stateObject := self.GetOrNewStateObject(common.RestoresAccountSaveAddress)
 	if stateObject != nil {
 		stateObject.DelAccountInRestoresAccountList(address)

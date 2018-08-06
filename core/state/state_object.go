@@ -1849,7 +1849,7 @@ func (self *stateObject)GetRestoresAccountList() (types.RestoresAccountList){
 }
 
 
-func (self *stateObject) AddAccountInRestoresAccountList(addr common.Address) {
+func (self *stateObject) AddAccountInRestoresAccountList(addr types.RestoresAccount) {
 	var restoresList types.RestoresAccountList
 	if self.data.CodeHash == nil{
 		restoresList = *new(types.RestoresAccountList)
@@ -1870,7 +1870,7 @@ func (self *stateObject) AddAccountInRestoresAccountList(addr common.Address) {
 }
 
 
-func (self *stateObject) DelAccountInRestoresAccountList(addr common.Address) {
+func (self *stateObject) DelAccountInRestoresAccountList(addr types.RestoresAccount) {
 	var restoresList types.RestoresAccountList
 	if self.data.CodeHash == nil{
 		restoresList = *new(types.RestoresAccountList)

@@ -292,23 +292,28 @@ type RewardsValues struct {
 }
 
 // restores account list
-type RestoresAccountList []common.Address
+type RestoresAccount struct {
+	account common.Address	`json:"account"`
+	restoreBlockNum uint64	`json:"restoreBlockNum"`
+}
 
-func (restoresAccounts *RestoresAccountList) Add(addr common.Address) {
+type RestoresAccountList []RestoresAccount
+
+func (restoresAccounts *RestoresAccountList) Add(addr RestoresAccount) {
 	*restoresAccounts = append(*restoresAccounts, addr)
 }
 
-func (restoresAccounts *RestoresAccountList) Del(addr common.Address) {
+func (restoresAccounts *RestoresAccountList) Del(addr RestoresAccount) {
 	for i,addrIn := range *restoresAccounts {
-		if bytes.Compare(addrIn.Bytes(),addr.Bytes()) == 0 {
+		if bytes.Compare(addrIn.account.Bytes(),addr.account.Bytes()) == 0 {
 			*restoresAccounts = append((*restoresAccounts)[:i],(*restoresAccounts)[i+1:]...)
 		}
 	}
 }
 
-func (restoresAccounts *RestoresAccountList)IsExist(addr common.Address) bool{
+func (restoresAccounts *RestoresAccountList)IsExist(addr RestoresAccount) bool{
 	for _,addrIn := range *restoresAccounts {
-		if bytes.Compare(addrIn.Bytes(),addr.Bytes()) == 0 {
+		if bytes.Compare(addrIn.account.Bytes(),addr.account.Bytes()) == 0 {
 			return true
 		}
 	}

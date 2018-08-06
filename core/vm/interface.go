@@ -166,8 +166,8 @@ type StateDB interface {
 	GetRestores(common.Address) *big.Int
 
 	GetRestoresAccountList() types.RestoresAccountList
-	AddAccountInRestoresAccountList(address common.Address) bool
-	DelAccountInRestoresAccountList(address common.Address) bool
+	AddAccountInRestoresAccountList(address types.RestoresAccount) bool
+	DelAccountInRestoresAccountList(address types.RestoresAccount) bool
 }
 
 // CallContext provides a basic interface for the EVM calling conventions. The EVM EVM
