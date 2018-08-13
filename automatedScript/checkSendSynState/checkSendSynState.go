@@ -68,7 +68,7 @@ func (jst *JsonStruct) Load(filename string, v interface{}) {
 	err = json.Unmarshal(data, v)
 }
 
-var ServeUrl string = "http://127.0.0.1:8550"
+var ServeUrl string = "http://127.0.0.1:8548"
 
 func httpPost(parameter []byte) []byte {
 	if nil == parameter {

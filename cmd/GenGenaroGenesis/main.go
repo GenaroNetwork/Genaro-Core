@@ -43,7 +43,7 @@ func GenGenaroPriceAccount() core.GenesisAccount {
 		CoinRewardsRatio:	common.CoinRewardsRatio,
 		StorageRewardsRatio:	common.StorageRewardsRatio,
 		RatioPerYear:	common.RatioPerYear,
-		SynStateAccount:	common.SynStateAccount.String(),
+		SynStateAccount:	"0xebb97ad3ca6b4f609da161c0b2b0eaa4ad58f3e8",//common.SynStateAccount.String(),
 	}
 	data, _ := json.Marshal(genaroPrice)
 	GenaroPriceAccount := core.GenesisAccount{

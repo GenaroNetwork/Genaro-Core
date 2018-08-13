@@ -37,7 +37,7 @@ var (
 
 var (
 	//官方账号
-	OfficialAddress Address  = HexToAddress("0xad188b762f9e3ef76c972960b80c9dc99b9cfc73")
+	OfficialAddress Address  = HexToAddress("0x174d246ee47ee21b4fd785b91406186e8777912f")
 )
 
 /*
