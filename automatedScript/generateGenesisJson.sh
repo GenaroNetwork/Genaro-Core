@@ -37,7 +37,7 @@ done
 printf "},\n"
 
 printf "\"config\": {
-    \"PromissoryNoteEnable\": true,
+    \"PromissoryNoteEnable\": false,
     \"PromissoryNotePercentage\": 90,
     \"PromissoryNotePrice\":  2000,
     \"LastPromissoryNoteBlockNumber\": 3600,
