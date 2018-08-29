@@ -46,8 +46,8 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"math/rand"
 	"github.com/GenaroNetwork/Genaro-Core/consensus/genaro"
+	"github.com/GenaroNetwork/Genaro-Core/core/state"
 )
 
 const (
@@ -218,6 +218,16 @@ func (s *PublicBlockChainAPI) GetCommitteeRank(ctx context.Context,blockNr rpc.B
 		return nil
 	}
 	committees,_ := state.GetCommitteeRank(0,uint64(blockNr))
+	return committees
+}
+
+// get MainAccount by rank
+func (s *PublicBlockChainAPI) GetMainAccountRank(ctx context.Context,blockNr rpc.BlockNumber) []common.Address {
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
+	if state == nil || err != nil {
+		return nil
+	}
+	committees,_ := state.GetMainAccountRank()
 	return committees
 }
 
@@ -793,6 +803,14 @@ func (s *PublicBlockChainAPI) GetStorageAt(ctx context.Context, address common.A
 	return res[:], state.Error()
 }
 
+func (s *PublicBlockChainAPI)GetAccountData(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (*state.Account,error) {
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
+	if state == nil || err != nil {
+		return nil, err
+	}
+	return state.GetAccountData(address),nil
+}
+
 // CallArgs represents the arguments for a call.
 type CallArgs struct {
 	From     common.Address  `json:"from"`
@@ -1314,6 +1332,42 @@ func (s *PublicTransactionPoolAPI) GetBucketTxInfo(ctx context.Context, startBlo
 	return retArr,nil
 }
 
+type bucketSupplement struct {
+	BucketID    string       `json:"bucketId"`
+	Size        uint64       `json:"size"`
+	Duration    uint64       `json:"duration"`
+	Address     string       `json:"address"`
+	Hash        common.Hash  `json:"hash"`
+	BlockNum    uint64       `json:"blockNum"`
+}
+
+func (s *PublicTransactionPoolAPI)GetBucketSupplementTx(ctx context.Context, startBlockNr rpc.BlockNumber, endBlockNr rpc.BlockNumber) ([]bucketSupplement, error)  {
+	var retArr []bucketSupplement
+
+	rpcTx, err := s.GetTransactionByBlockNumberRange(ctx, startBlockNr, endBlockNr, common.SpecialTxBucketSupplement)
+	if err != nil{
+		return nil, err
+	}
+	for _, tx := range rpcTx {
+		if transactionReceipt, err:= s.GetTransactionReceipt(ctx,tx.Hash); err == nil && transactionReceipt != nil {
+			if status, ok := transactionReceipt["status"]; ok && uint(status.(hexutil.Uint)) == types.ReceiptStatusSuccessful {
+				var s types.SpecialTxInput
+				json.Unmarshal([]byte(tx.Input), &s)
+				var bucketSup bucketSupplement
+				bucketSup.Size = s.Size
+				bucketSup.Duration = s.Duration
+				bucketSup.BucketID = s.BucketID
+				bucketSup.Address = s.Address
+				bucketSup.Hash = tx.Hash
+				bucketSup.BlockNum = tx.BlockNumber.ToInt().Uint64()
+				retArr = append(retArr, bucketSup)
+			}
+		}
+	}
+
+	return retArr, nil
+}
+
 
 func (s *PublicTransactionPoolAPI) GetGenaroPrice(ctx context.Context, blockNr rpc.BlockNumber) map[string]string {
 	genaroPriceMap := make(map[string]string)
@@ -1586,19 +1640,6 @@ func (args *SendTxArgs) toTransaction() *types.Transaction {
 			s.SpecialTxTypeMortgageInit.EndTime =  tmp.Add(&tmp,big.NewInt(s.SpecialTxTypeMortgageInit.CreateTime)).Int64()
 			s.SpecialTxTypeMortgageInit.FileID = hex.EncodeToString(timeUnixSha256[:])
 			s.SpecialTxTypeMortgageInit.FromAccount = args.From
-			input,_ := json.Marshal(s)
-			return  types.NewTransaction(uint64(*args.Nonce), *args.To, (*big.Int)(args.Value), uint64(*args.Gas), (*big.Int)(args.GasPrice), input)
-		case common.SpecialTxTypeSpaceApply.Uint64():
-			var b []*types.BucketPropertie
-			for _, v := range s.Buckets{
-				t := time.Now()
-				r := rand.New(rand.NewSource(t.Unix()))
-				bucketID := s.Address + strconv.FormatInt(t.Unix(),10) + strconv.Itoa(r.Int())
-				bucketIdSha256 := sha256.Sum256([]byte(bucketID))
-				v.BucketId = hex.EncodeToString(bucketIdSha256[:])
-				b = append(b, v)
-			}
-			s.Buckets = b
 			input,_ := json.Marshal(s)
 			return  types.NewTransaction(uint64(*args.Nonce), *args.To, (*big.Int)(args.Value), uint64(*args.Gas), (*big.Int)(args.GasPrice), input)
 		case common.SpecialTxTypeSyncSidechainStatus.Uint64():
@@ -2024,4 +2065,65 @@ func (s *PublicBlockChainAPI) CheckUnlockSharedKey(ctx context.Context, address 
 		return false
 	}
 	return state.CheckUnlockSharedKey(address, shareKeyId)
+}
+
+
+// get All Promissory NotesNum
+func (s *PublicBlockChainAPI) GetAllPromissoryNotesNum(ctx context.Context,address common.Address) uint64 {
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, rpc.LatestBlockNumber)
+	if state == nil || err != nil {
+		return uint64(0)
+	}
+	return state.GetAllPromissoryNotesNum(address)
+}
+
+
+// get Befor Promissory Notes
+func (s *PublicBlockChainAPI) GetBeforPromissoryNotesNum(ctx context.Context,address common.Address) uint64 {
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, rpc.LatestBlockNumber)
+	if state == nil || err != nil {
+		return uint64(0)
+	}
+	return state.GetBeforPromissoryNotesNum(address,s.BlockNumber().Uint64())
+}
+
+// get All Promissory Notes
+func (s *PublicBlockChainAPI) GetPromissoryNotes(ctx context.Context,address common.Address) types.PromissoryNotes {
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, rpc.LatestBlockNumber)
+	if state == nil || err != nil {
+		return nil
+	}
+	return state.GetPromissoryNotes(address)
+}
+
+
+func (s *PublicBlockChainAPI) GetOptionTx(ctx context.Context,address common.Address) types.OptionTxTable {
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, rpc.LatestBlockNumber)
+	if state == nil || err != nil {
+		return nil
+	}
+
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Println(err)
+		}
+	}()
+
+	optionTxMemorySize := s.b.ChainConfig().Genaro.OptionTxMemorySize
+	optionTxTableRet := make(types.OptionTxTable)
+
+	for i := int64(0) ; i < int64(optionTxMemorySize) ; i++ {
+		optionSaveAddr := common.GetOptionSaveAddrByPos(i)
+		optionTxTable := state.GetOptionTxTableByAddress(optionSaveAddr)
+		if optionTxTable != nil {
+			txTableMap := *optionTxTable
+			for k, v := range txTableMap {
+				if v.PromissoryNotesOwner == address {
+					optionTxTableRet[k] = v
+				}
+			}
+		}
+	}
+
+	return optionTxTableRet
 }
