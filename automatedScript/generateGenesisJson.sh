@@ -44,7 +44,7 @@ printf "\"config\": {
     \"PromissoryNotePeriod\": 100,
     \"SurplusCoin\": 175000000,
     \"SynStateAccount\": \"0xebb97ad3ca6b4f609da161c0b2b0eaa4ad58f3e8\",
-    \"HeftAccount\": \"0xad188b762f9e3ef76c972960b80c9dc99b9cfc73\",
+    \"HeftAccount\": \"0x174d246ee47ee21b4fd785b91406186e8777912f\",
     \"BindingAccount\": \"0xad188b762f9e3ef76c972960b80c9dc99b9cfc73\"
   }\n"
 
