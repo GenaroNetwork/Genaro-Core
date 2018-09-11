@@ -15,6 +15,7 @@ import (
 	"github.com/GenaroNetwork/Genaro-Core/common/hexutil"
 	"strings"
 	"github.com/GenaroNetwork/Genaro-Core/params"
+	"strconv"
 )
 
 
@@ -243,6 +244,16 @@ func CheckBucketSupplement(s types.SpecialTxInput, state StateDB,genaroConfig *p
 
 	if s.Size == 0 && s.Duration < 86400{
 		return errors.New("param [size / duration] missing or must be larger than zero")
+	}
+
+	if s.Message == "" {
+		return errors.New("param [ msg ] missing or can't be null")
+	}
+
+
+	_, err := strconv.Atoi(s.Message)
+	if err != nil {
+		return errors.New("param [ msg ] is not timestamp")
 	}
 
 	adress := common.HexToAddress(s.Address)

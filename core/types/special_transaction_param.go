@@ -11,6 +11,7 @@ import (
 	"github.com/GenaroNetwork/Genaro-Core/rlp"
 	"github.com/GenaroNetwork/Genaro-Core/crypto"
 	"time"
+	"strconv"
 )
 
 type SpecialTxInput struct {
@@ -89,10 +90,16 @@ func (s SpecialTxInput) SpecialCost(currentPrice *GenaroPrice, bucketsMap map[st
 			bucketPropertie := v.(BucketPropertie)
 
 			if s.Size != 0 && s.Duration == 0{
+
+				timeInt, err := strconv.Atoi(s.Message)
+				if err != nil {
+					timeInt = int(bucketPropertie.TimeStart)
+				}
+				txTime := time.Unix(int64(timeInt), 0)
 				calSize := s.Size
 				var subtraction float64
-				if uint64(time.Now().Unix()) > bucketPropertie.TimeStart  {
-					subtraction = float64(time.Now().Unix())
+				if uint64(txTime.Unix()) > bucketPropertie.TimeStart  {
+					subtraction = float64(txTime.Unix())
 				} else {
 					subtraction = float64(bucketPropertie.TimeStart)
 				}
@@ -109,8 +116,15 @@ func (s SpecialTxInput) SpecialCost(currentPrice *GenaroPrice, bucketsMap map[st
 
 
 				var subtraction float64
-				if uint64(time.Now().Unix()) > bucketPropertie.TimeStart  {
-					subtraction = float64(time.Now().Unix())
+
+				timeInt, err := strconv.Atoi(s.Message)
+				if err != nil {
+					timeInt = int(bucketPropertie.TimeStart)
+				}
+				txTime := time.Unix(int64(timeInt), 0)
+
+				if uint64(txTime.Unix()) > bucketPropertie.TimeStart  {
+					subtraction = float64(txTime.Unix())
 				} else {
 					subtraction = float64(bucketPropertie.TimeStart)
 				}
