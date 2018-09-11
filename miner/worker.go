@@ -37,6 +37,7 @@ import (
 	"gopkg.in/fatih/set.v0"
 	"github.com/pkg/errors"
 	"github.com/GenaroNetwork/Genaro-Core/consensus/misc"
+	"strings"
 )
 
 const (
@@ -129,6 +130,9 @@ type worker struct {
 	// atomic status counters
 	mining int32
 	atWork int32
+
+	// atomic work status
+	workIdx int32
 }
 
 func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase common.Address, eth Backend, mux *event.TypeMux) *worker {
@@ -256,11 +260,10 @@ func (self *worker) update() {
 		select {
 		// Handle ChainHeadEvent
 		case <-self.chainHeadCh:
-			//if self.config.Genaro != nil {
-			//	GenaroCommitNewWork(self)
-			//} else {
-			self.commitNewWork()
-			//}
+			err := self.commitNewWork()
+			if err != nil && strings.EqualFold(err.Error(),SynError.Error()) {
+				atomic.StoreInt32(&self.workIdx, 0)
+			}
 
 		// Handle ChainSideEvent
 		case ev := <-self.chainSideCh:
@@ -402,6 +405,9 @@ func (self *worker) commitNewWork() error{
 	defer self.uncleMu.Unlock()
 	self.currentMu.Lock()
 	defer self.currentMu.Unlock()
+
+	// set status
+	atomic.StoreInt32(&self.workIdx, 1)
 
 	tstart := time.Now()
 	parent := self.chain.CurrentBlock()
