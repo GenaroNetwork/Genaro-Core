@@ -29,6 +29,8 @@ const (
 )
 
 var (
+	minRatio = common.Base*95/100
+	maxRatio = common.Base*105/100
 	//coinRewardsRatio				 = common.Base*50/100
 	//storageRewardsRatio				 = common.Base*50/100
 	//ratioPerYear					 = common.Base*7/100
@@ -474,7 +476,7 @@ func SetPreCoinActualRewards(state *state.StateDB,coinrewards *big.Int) {
 
 func GetPreCoinActualRewards(state *state.StateDB) *big.Int {
 	rewardsValues := state.GetRewardsValues()
-	return rewardsValues.PreStorageActualRewards
+	return rewardsValues.PreCoinActualRewards
 }
 
 func GetStorageActualRewards(state *state.StateDB) *big.Int {
@@ -698,6 +700,12 @@ func getCoinCofficient(config *params.GenaroConfig, coinrewards, surplusRewards 
 	//get coefficient
 	planrewards.Mul(planrewards, big.NewInt(int64(common.Base)))
 	coinRatio := planrewards.Div(planrewards, coinrewards).Uint64()
+	if coinRatio < minRatio {
+		coinRatio = minRatio
+	} else if coinRatio > maxRatio {
+		coinRatio = maxRatio
+	}
+
 	return coinRatio
 }
 
@@ -717,6 +725,12 @@ func getStorageCoefficient(config *params.GenaroConfig, storagerewards, surplusR
 	//get coefficient
 	planrewards.Mul(planrewards, big.NewInt(int64(common.Base)))
 	storageRatio := planrewards.Div(planrewards, storagerewards).Uint64()
+	if storageRatio < minRatio {
+		storageRatio = minRatio
+	} else if storageRatio > maxRatio {
+		storageRatio = maxRatio
+	}
+
 	return storageRatio
 }
 
