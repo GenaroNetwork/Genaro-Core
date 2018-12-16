@@ -146,11 +146,12 @@ func main() {
 				idx++
 			}
 			time.Sleep(time.Duration(delaytime) * time.Second)
-			if idx > 100 {
+			if idx > 30 {
 				break LOOP
 			}
 		}
 		lock.Unlock()
+		time.Sleep(3 * time.Duration(delaytime) * time.Second)
 	}
 
 }
