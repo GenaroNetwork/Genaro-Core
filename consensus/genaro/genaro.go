@@ -671,8 +671,8 @@ func handleAlreadyBackStakeList(config *params.GenaroConfig, header *types.Heade
 func (g *Genaro) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 	log.Info("Finalize:" + header.Number.String())
 	//commit rank
-	blockNumber := header.Number.Uint64()
-	updateSpecialBlock(g.config, header, state)
+	//blockNumber := header.Number.Uint64()
+	//updateSpecialBlock(g.config, header, state)
 
 	// update LastSynBlockNum
 	extraData := UnmarshalToExtra(header)
@@ -686,22 +686,22 @@ func (g *Genaro) Finalize(chain consensus.ChainReader, header *types.Header, sta
 		state.AddLastRootState(header.ParentHash, header.Number.Uint64()-1)
 	}
 
-	snap, err := g.snapshot(chain, GetTurnOfCommiteeByBlockNumber(g.config, header.Number.Uint64()), nil)
-	if err != nil {
-		return nil, err
-	}
+	//snap, err := g.snapshot(chain, GetTurnOfCommiteeByBlockNumber(g.config, header.Number.Uint64()), nil)
+	//if err != nil {
+	//	return nil, err
+	//}
 	// 按账户设定收益权重
 	//proportion := snap.Committee[header.Coinbase]
 	// 按照顺位设定收益权重
-	proportion := snap.Committee[snap.CommitteeRank[blockNumber%snap.CommitteeSize]]
+	//proportion := snap.Committee[snap.CommitteeRank[blockNumber%snap.CommitteeSize]]
 
 	//  coin interest reward
-	accumulateInterestRewards(g.config, state, header, proportion, blockNumber, snap.CommitteeSize, snap.CommitteeAccountBinding)
+	//accumulateInterestRewards(g.config, state, header, proportion, blockNumber, snap.CommitteeSize, snap.CommitteeAccountBinding)
 	// storage reward
-	accumulateStorageRewards(g.config, state, blockNumber, snap.CommitteeSize)
+	//accumulateStorageRewards(g.config, state, blockNumber, snap.CommitteeSize)
 
 	//handle already back stake list
-	handleAlreadyBackStakeList(g.config, header, state)
+	//handleAlreadyBackStakeList(g.config, header, state)
 
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 	header.UncleHash = types.CalcUncleHash(nil)
