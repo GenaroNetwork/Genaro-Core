@@ -147,4 +147,8 @@ func TestAccountName(t *testing.T) {
 	if !name.IsValid() {
 		t.Log("test3 name is invalid")
 	}
+	name.SetString("qwd1 2EE@dw")
+	if !name.IsValid() {
+		t.Log("test4 name is invalid")
+	}
 }

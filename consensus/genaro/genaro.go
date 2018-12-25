@@ -2,11 +2,6 @@ package genaro
 
 import (
 	"errors"
-	"math/big"
-	"sync"
-	"time"
-
-	"encoding/json"
 	"github.com/GenaroNetwork/Genaro-Core/accounts"
 	"github.com/GenaroNetwork/Genaro-Core/common"
 	"github.com/GenaroNetwork/Genaro-Core/consensus"
@@ -20,6 +15,9 @@ import (
 	"github.com/GenaroNetwork/Genaro-Core/rlp"
 	"github.com/GenaroNetwork/Genaro-Core/rpc"
 	"github.com/hashicorp/golang-lru"
+	"math/big"
+	"sync"
+	"time"
 )
 
 const (
@@ -42,6 +40,7 @@ var (
 	errInvalidEpochBlock = errors.New("epoch block has no committee list")
 	errInvalidDifficulty = errors.New("invalid difficulty")
 	errInvalidBlockTime  = errors.New("invalid block time")
+	errInvalidBlockMiner = errors.New("this block miner is near by 2/3 committee size block")
 )
 
 // Various error messages to mark blocks invalid.
@@ -153,6 +152,12 @@ func (g *Genaro) Prepare(chain consensus.ChainReader, header *types.Header) erro
 	// set block author in Coinbase
 	// TODO It may be modified later
 	header.Coinbase = g.signer
+
+	checkNum := g.config.CommitteeMaxSize * 2 / 3
+	if !checkHeadCoinBase(chain, header.ParentHash, header.Coinbase, header.Number.Uint64(), checkNum) {
+		return errInvalidBlockMiner
+	}
+
 	header.Nonce = types.BlockNonce{}
 	number := header.Number.Uint64()
 
@@ -362,6 +367,49 @@ func (g *Genaro) snapshot(chain consensus.ChainReader, epollNumber uint64, paren
 	return snap, nil
 }
 
+// 检测coinbase是否在前几个块中存在
+func checkHeadCoinBase(chain consensus.ChainReader, parentHash common.Hash, coinbase common.Address, blockNum uint64, lenth uint64) bool {
+	if blockNum == 1 || lenth == 0 {
+		return true
+	}
+	parent := chain.GetHeader(parentHash, blockNum-1)
+	if parent == nil {
+		return false
+	} else {
+		if parent.Coinbase == coinbase {
+			return false
+		}
+		return checkHeadCoinBase(chain, parent.ParentHash, coinbase, parent.Number.Uint64(), lenth-1)
+	}
+}
+
+func (g *Genaro) CheckCoinbase(chain consensus.ChainReader, header *types.Header, parents []*types.Header) bool {
+	checkNum := g.config.CommitteeMaxSize * 2 / 3
+
+	lenth := uint64(len(parents))
+	if lenth >= checkNum {
+		for i := lenth - checkNum; i < lenth; i++ {
+			if parents[i].Coinbase == header.Coinbase {
+				return false
+			}
+		}
+	} else {
+		for i := uint64(0); i < lenth; i++ {
+			if parents[i].Coinbase == header.Coinbase {
+				return false
+			}
+		}
+		headThis := header
+		if lenth == 0 {
+			headThis = chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
+		} else {
+			headThis = chain.GetHeader(parents[0].ParentHash, parents[0].Number.Uint64()-1)
+		}
+		return checkHeadCoinBase(chain, headThis.ParentHash, header.Coinbase, headThis.Number.Uint64(), checkNum-lenth)
+	}
+	return true
+}
+
 // VerifySeal implements consensus.Engine, checking whether the signature contained
 // in the header satisfies the consensus protocol requirements.
 func (g *Genaro) VerifySeal(chain consensus.ChainReader, header *types.Header) error {
@@ -375,9 +423,14 @@ func (g *Genaro) verifySeal(chain consensus.ChainReader, header *types.Header, p
 		return errUnknownBlock
 	}
 	// check syn state
-	extraData := UnmarshalToExtra(header)
-	if blockNumber-extraData.LastSynBlockNum > common.SynBlockLen+1 {
-		return errors.New("need SynState")
+	//extraData := UnmarshalToExtra(header)
+	//if blockNumber-extraData.LastSynBlockNum > common.SynBlockLen+1 {
+	//	return errors.New("need SynState")
+	//}
+
+	// 检测出块人是否符合 2/3 原则
+	if !g.CheckCoinbase(chain, header, parents) {
+		return errInvalidBlockMiner
 	}
 
 	// Don't waste time checking blocks from the future
@@ -675,16 +728,16 @@ func (g *Genaro) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	//updateSpecialBlock(g.config, header, state)
 
 	// update LastSynBlockNum
-	extraData := UnmarshalToExtra(header)
-	lastSynState := state.GetLastSynState()
-	if lastSynState != nil {
-		extraData.LastSynBlockNum = lastSynState.LastSynBlockNum
-		extraData.LastSynBlockHash = lastSynState.LastSynBlockHash
-		header.Extra, _ = json.Marshal(extraData)
-	}
-	if header.Number.Uint64() > common.SynBlockLen {
-		state.AddLastRootState(header.ParentHash, header.Number.Uint64()-1)
-	}
+	//extraData := UnmarshalToExtra(header)
+	//lastSynState := state.GetLastSynState()
+	//if lastSynState != nil {
+	//	extraData.LastSynBlockNum = lastSynState.LastSynBlockNum
+	//	extraData.LastSynBlockHash = lastSynState.LastSynBlockHash
+	//	header.Extra, _ = json.Marshal(extraData)
+	//}
+	//if header.Number.Uint64() > common.SynBlockLen {
+	//	state.AddLastRootState(header.ParentHash, header.Number.Uint64()-1)
+	//}
 
 	//snap, err := g.snapshot(chain, GetTurnOfCommiteeByBlockNumber(g.config, header.Number.Uint64()), nil)
 	//if err != nil {
