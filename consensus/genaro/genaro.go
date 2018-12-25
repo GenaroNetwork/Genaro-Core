@@ -400,10 +400,8 @@ func (g *Genaro) CheckCoinbase(chain consensus.ChainReader, header *types.Header
 			}
 		}
 		headThis := header
-		if lenth == 0 {
-			headThis = chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
-		} else {
-			headThis = chain.GetHeader(parents[0].ParentHash, parents[0].Number.Uint64()-1)
+		if lenth != 0 {
+			headThis = parents[0]
 		}
 		return checkHeadCoinBase(chain, headThis.ParentHash, header.Coinbase, headThis.Number.Uint64(), checkNum-lenth)
 	}

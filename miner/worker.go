@@ -471,19 +471,19 @@ func (self *worker) commitNewWork() error {
 	txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending)
 	work.commitTransactions(self.mux, txs, self.chain, self.coinbase)
 
-	if self.config.Genaro != nil {
-		// check if has Syn State
-		lastSynState := work.state.GetLastSynState()
-		if lastSynState != nil {
-			if header.Number.Uint64()-lastSynState.LastSynBlockNum > common.SynBlockLen+1 {
-				log.Error("need SynState")
-				return SynError
-			}
-		} else {
-			log.Error("lastSynState nil")
-			return errors.New("lastSynState nil")
-		}
-	}
+	//if self.config.Genaro != nil {
+	//	// check if has Syn State
+	//	lastSynState := work.state.GetLastSynState()
+	//	if lastSynState != nil {
+	//		if header.Number.Uint64()-lastSynState.LastSynBlockNum > common.SynBlockLen+1 {
+	//			log.Error("need SynState")
+	//			return SynError
+	//		}
+	//	} else {
+	//		log.Error("lastSynState nil")
+	//		return errors.New("lastSynState nil")
+	//	}
+	//}
 
 	// compute uncles for the new block.
 	var (
