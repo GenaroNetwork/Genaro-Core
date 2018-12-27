@@ -692,6 +692,8 @@ func (pool *TxPool) dispatchHandlerValidateTx(input []byte, caller common.Addres
 		return vm.CheckTransferNameTxStatus(caller, s, pool.currentState)
 	case common.SpecialTxUnsubscribeName.Uint64():
 		return vm.CheckUnsubscribeNameTxStatus(caller, s, pool.currentState)
+	case common.SpecialTxAccountBindingBysub.Uint64(): // 子账号绑定
+		return vm.CheckAccountBindingBysubTx(caller, s, pool.currentState)
 	case common.SpecialTxPublishOption.Uint64():
 		//发布期权售卖交易
 		return vm.CheckPublishOption(caller, s, pool.currentState, pool.chain.CurrentBlock().Number())

@@ -277,6 +277,8 @@ func dispatchHandler(evm *EVM, caller common.Address, input []byte) error {
 		err = transferNameTxStatus(evm, s, caller)
 	case common.SpecialTxUnsubscribeName.Uint64(): // 注销名下的别名
 		err = unsubscribeNameTxStatus(evm, s, caller)
+	case common.SpecialTxAccountBindingBysub.Uint64(): // 子账号绑定
+		err = accountBindingBysub(evm, s, caller)
 	case common.SpecialTxRevoke.Uint64(): // 撤销期权交易
 		err = revokePromissoryNotesTx(evm, s, caller)
 	case common.SpecialTxWithdrawCash.Uint64(): //提现
@@ -466,6 +468,27 @@ func accountBinding(evm *EVM, s types.SpecialTxInput, caller common.Address) err
 	}
 	// 将子账号从候选者列表中去除
 	if !(*evm).StateDB.DelCandidate(subAddr) {
+		return errors.New("DelCandidate failed")
+	}
+
+	return nil
+}
+
+// 账号之间建立绑定，由子账号完成绑定连接
+func accountBindingBysub(evm *EVM, s types.SpecialTxInput, caller common.Address) error {
+	err := CheckAccountBindingBysubTx(caller, s, (*evm).StateDB)
+	if err != nil {
+		return err
+	}
+
+	// 主账号
+	mainAddr := common.HexToAddress(s.Address)
+	// 账号绑定
+	if !(*evm).StateDB.UpdateAccountBinding(mainAddr, caller) {
+		return errors.New("binding failed")
+	}
+	// 将子账号从候选者列表中去除
+	if !(*evm).StateDB.DelCandidate(caller) {
 		return errors.New("DelCandidate failed")
 	}
 

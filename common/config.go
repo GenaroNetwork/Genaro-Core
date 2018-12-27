@@ -151,6 +151,9 @@ var (
 	// 注销别名的交易
 	SpecialTxUnsubscribeName = big.NewInt(25)
 
+	// 子账号绑定
+	SpecialTxAccountBindingBysub = big.NewInt(26)
+
 	/************期权交易类型**************/
 	//提现
 	SpecialTxWithdrawCash = big.NewInt(30)

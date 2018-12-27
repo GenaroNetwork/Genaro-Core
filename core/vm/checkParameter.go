@@ -544,6 +544,41 @@ func CheckAccountBindingTx(caller common.Address, s types.SpecialTxInput, state 
 	return nil
 }
 
+// 子账号绑定检查
+func CheckAccountBindingBysubTx(caller common.Address, s types.SpecialTxInput, state StateDB) error {
+	genaroPrice := state.GetGenaroPrice()
+	// 主账号
+	mainAccount := common.HexToAddress(s.Address)
+	// 子账号
+	subAccount := caller
+	if bytes.EqualFold(mainAccount.Bytes(), subAccount.Bytes()) {
+		return errors.New("same account")
+	}
+	// 主账号是否是候选者
+	if !state.IsCandidateExist(mainAccount) {
+		return errors.New("mainAddr is not a candidate")
+	}
+	// 主账号绑定数量是否超出限制
+	if state.GetSubAccountsCount(mainAccount) > int(genaroPrice.MaxBinding) {
+		return errors.New("binding enough")
+	}
+	// 绑定的子账号是否已经是一个主账号
+	if state.IsBindingMainAccount(subAccount) {
+		return errors.New("sub account is a main account")
+	}
+	// 子账号是否是候选者或存在于子账号队列中
+	thisMainAccount := state.GetMainAccount(subAccount)
+	if !state.IsCandidateExist(subAccount) && thisMainAccount == nil {
+		return errors.New("subAddr is not a candidate")
+	}
+	// 账号是否已经处于绑定状态
+	if thisMainAccount != nil && bytes.Compare(thisMainAccount.Bytes(), mainAccount.Bytes()) == 0 {
+		return errors.New("has binding")
+	}
+
+	return nil
+}
+
 // 检查输入参数，并返回执行类型
 // 1 主账号解绑
 // 2 子账号解绑
