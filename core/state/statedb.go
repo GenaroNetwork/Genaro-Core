@@ -386,6 +386,32 @@ func (self *StateDB) IsNameAccountExist(name string) (bool, error) {
 	return true, nil
 }
 
+func (self *StateDB)IsValidAccount(addr common.Address) (bool){
+	addr1, err := self.GetNameAccount(addr.String())
+	if err != nil {
+		return false
+	}
+	if 0 == bytes.Compare(addr1.Hash().Bytes(), common.Hash{}.Bytes()) {
+		return false
+	}
+	return true
+}
+
+func (self *StateDB)SetValidAccount(addr common.Address) (error){
+	var accountName types.AccountName
+	err := accountName.SetString(addr.String())
+	if err != nil {
+		return err
+	}
+
+	nonce := self.GetNonce(common.WhiteListSaveAddress)
+	if nonce == 0 {
+		self.SetNonce(common.WhiteListSaveAddress, 1)
+	}
+	self.SetState(common.WhiteListSaveAddress, accountName.ToHash(), addr.Hash())
+	return nil
+}
+
 // 判断用户是否拥有此别名
 func (self *StateDB) HasName(addr common.Address, name string) bool {
 	nameAddr, err := self.GetNameAccount(name)

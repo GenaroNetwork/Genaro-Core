@@ -76,6 +76,8 @@ var (
 
 	// 账户的别名存储
 	NameSpaceSaveAddress Address = HexToAddress("0xb000000000000000000000000000000000000000")
+
+	WhiteListSaveAddress Address = HexToAddress("0xc000000000000000000000000000000000000000")
 )
 
 var SpecialAddressList = []Address{CandidateSaveAddress, BackStakeAddress, LastSynStateSaveAddress, StakeNode2StakeAddress, GenaroPriceAddress, SpecialSyncAddress, RewardsSaveAddress, BindingSaveAddress, ForbidBackStakeSaveAddress, NameSpaceSaveAddress}
@@ -176,6 +178,9 @@ var (
 
 	//已购买空间补充
 	SpecialTxBucketSupplement = big.NewInt(41)
+
+	// 同步账户到白名单
+	WhiteListAccoutSync = big.NewInt(48)
 )
 
 //特殊交易 Tx.init 格式
