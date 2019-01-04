@@ -1439,6 +1439,23 @@ func (s *PublicTransactionPoolAPI) GetAddressByNode(ctx context.Context, str str
 	return retS
 }
 
+
+
+func (s *PublicTransactionPoolAPI) GetWhiteListStatus(ctx context.Context, address common.Address) map[string]bool {
+	ret := make(map[string]bool)
+	ret["InWhiteList"] = false
+
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, rpc.LatestBlockNumber)
+	if state == nil || err != nil {
+		return ret
+	}
+
+	status := state.IsValidAccount(address)
+	ret["InWhiteList"] = status
+
+	return ret
+}
+
 // GetTransactionByBlockHashAndIndex returns the transaction for the given block hash and index.
 func (s *PublicTransactionPoolAPI) GetTransactionByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint) *RPCTransaction {
 	if block, _ := s.b.GetBlock(ctx, blockHash); block != nil {

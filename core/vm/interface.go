@@ -183,6 +183,7 @@ type StateDB interface {
 
 	IsValidAccount(addr common.Address) (bool)
 	SetValidAccount(addr common.Address) (error)
+	UnSetValidAccount(addr common.Address) (error)
 }
 
 // CallContext provides a basic interface for the EVM calling conventions. The EVM EVM

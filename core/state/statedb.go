@@ -391,10 +391,10 @@ func (self *StateDB)IsValidAccount(addr common.Address) (bool){
 	if err != nil {
 		return false
 	}
-	if 0 == bytes.Compare(addr1.Hash().Bytes(), common.Hash{}.Bytes()) {
-		return false
+	if 0 == bytes.Compare(addr1.Hash().Bytes(), addr.Hash().Bytes()) {
+		return true
 	}
-	return true
+	return false
 }
 
 func (self *StateDB)SetValidAccount(addr common.Address) (error){
@@ -409,6 +409,21 @@ func (self *StateDB)SetValidAccount(addr common.Address) (error){
 		self.SetNonce(common.WhiteListSaveAddress, 1)
 	}
 	self.SetState(common.WhiteListSaveAddress, accountName.ToHash(), addr.Hash())
+	return nil
+}
+
+func (self *StateDB)UnSetValidAccount(addr common.Address) error {
+	var accountName types.AccountName
+	err := accountName.SetString(addr.String())
+	if err != nil {
+		return err
+	}
+
+	nonce := self.GetNonce(common.WhiteListSaveAddress)
+	if nonce == 0 {
+		self.SetNonce(common.WhiteListSaveAddress, 1)
+	}
+	self.SetState(common.WhiteListSaveAddress, accountName.ToHash(), common.Hash{})
 	return nil
 }
 

@@ -291,8 +291,10 @@ func dispatchHandler(evm *EVM, caller common.Address, input []byte) error {
 		err = CarriedOutPromissoryNotes(evm, s, caller)
 	case common.SpecialTxTurnBuyPromissoryNotes.Uint64(): //购买期权
 		err = turnBuyPromissoryNotes(evm, s, caller)
-	case common.WhiteListAccoutSync.Uint64():
+	case common.WhiteListAccoutSync.Uint64():  //添加白名单账户
 		err = setWhiteListAccoutStatus(evm, s, caller)
+	case common.WhiteListAccoutRm.Uint64(): //踢出白名单账户
+		err = rmWhiteListAccout(evm, s, caller)
 	default:
 		err = errors.New("undefined type of special transaction")
 	}
@@ -302,6 +304,15 @@ func dispatchHandler(evm *EVM, caller common.Address, input []byte) error {
 		log.Info(fmt.Sprintf("special transaction param：%s", string(input)))
 	}
 	return err
+}
+
+func rmWhiteListAccout(evm *EVM, s types.SpecialTxInput, caller common.Address) error {
+	add := common.HexToAddress(s.Address)
+	err := (*evm).StateDB.UnSetValidAccount(add)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func setWhiteListAccoutStatus(evm *EVM, s types.SpecialTxInput, caller common.Address) error {
