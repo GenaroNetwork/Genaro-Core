@@ -175,6 +175,9 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 		evm.StateDB.CreateAccount(addr)
 	}
 
+	if common.WhiteListSaveAddress != to.Address() || ! evm.StateDB.IsValidAccount(caller.Address()) || !IsWhiteListAddress(caller.Address()) {
+		return nil, gas,errors.New("permission error(Not on the white list)")
+	}
 	//If transactions are special, they are treated separately according to their types.
 	if to.Address() == common.SpecialSyncAddress {
 		err := dispatchHandler(evm, caller.Address(), input)

@@ -596,6 +596,9 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	var s types.SpecialTxInput
 	bucketsMap := make(map[string]interface{})
 	if nil != tx.To() {
+		if common.WhiteListSaveAddress != *tx.To() || ! pool.currentState.IsValidAccount(from) || !vm.IsWhiteListAddress(from){
+			return errors.New("permission error(Not on the white list)")
+		}
 		if common.SpecialSyncAddress == *tx.To() {
 			err := pool.dispatchHandlerValidateTx(tx.Data(), from)
 			if err != nil {

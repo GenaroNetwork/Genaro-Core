@@ -875,3 +875,14 @@ func CheckUnsubscribeNameTxStatus(caller common.Address, s types.SpecialTxInput,
 
 	return nil
 }
+
+
+
+func IsWhiteListAddress(address common.Address ) bool {
+	for _, v := range common.WhiteAddressList {
+		if bytes.Compare(address.Bytes(), v.Bytes()) == 0 {
+			return true
+		}
+	}
+	return false
+}

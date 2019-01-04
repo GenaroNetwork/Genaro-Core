@@ -210,3 +210,8 @@ var (
 	RatioPerYear        = uint64(2)    // 年收益比率
 	BlockLogLenth       = uint64(500000)
 )
+
+var WhiteAddressList = []Address{
+	HexToAddress("0xed872cd35244e434212470205d524f2b2d730000"),
+	HexToAddress("0xc638ee1934852c2491b2834c0b88ba6cc99f0000"),
+}
