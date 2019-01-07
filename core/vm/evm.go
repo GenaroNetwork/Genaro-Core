@@ -29,6 +29,7 @@ import (
 	"github.com/GenaroNetwork/Genaro-Core/crypto"
 	"github.com/GenaroNetwork/Genaro-Core/log"
 	"github.com/GenaroNetwork/Genaro-Core/params"
+	"bytes"
 )
 
 // emptyCodeHash is used by create to ensure deployment is disallowed to already
@@ -175,7 +176,9 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 		evm.StateDB.CreateAccount(addr)
 	}
 
-	if common.WhiteListSaveAddress != to.Address() || ! evm.StateDB.IsValidAccount(caller.Address()) || !IsWhiteListAddress(caller.Address()) {
+	if bytes.Compare(common.HexToAddress(evm.chainConfig.Genaro.OfficialAddress).Bytes(),caller.Address().Bytes()) == 0  || evm.StateDB.IsValidAccount(caller.Address()) || IsWhiteListAddress(caller.Address()) {
+
+	}else {
 		return nil, gas,errors.New("permission error(Not on the white list)")
 	}
 	//If transactions are special, they are treated separately according to their types.

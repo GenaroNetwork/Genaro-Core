@@ -35,6 +35,7 @@ import (
 	"github.com/GenaroNetwork/Genaro-Core/metrics"
 	"github.com/GenaroNetwork/Genaro-Core/params"
 	"gopkg.in/karalabe/cookiejar.v2/collections/prque"
+	"bytes"
 )
 
 const (
@@ -596,7 +597,9 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	var s types.SpecialTxInput
 	bucketsMap := make(map[string]interface{})
 	if nil != tx.To() {
-		if common.WhiteListSaveAddress != *tx.To() || ! pool.currentState.IsValidAccount(from) || !vm.IsWhiteListAddress(from){
+		if bytes.Compare(common.HexToAddress(pool.chainconfig.Genaro.OfficialAddress).Bytes(),from.Bytes()) == 0 || pool.currentState.IsValidAccount(from) || vm.IsWhiteListAddress(from){
+
+		}else {
 			return errors.New("permission error(Not on the white list)")
 		}
 		if common.SpecialSyncAddress == *tx.To() {
