@@ -311,7 +311,7 @@ func dispatchHandler(evm *EVM, caller common.Address, input []byte) error {
 
 func rmWhiteListAccout(evm *EVM, s types.SpecialTxInput, caller common.Address) error {
 
-	if err := WhiteListTxParamCheck(caller, s, (*evm).StateDB); err != nil {
+	if err := WhiteListTxParamCheck(caller, s, (*evm).StateDB, evm.chainConfig.Genaro); err != nil {
 		return err
 	}
 	add := common.HexToAddress(s.Address)
@@ -323,7 +323,7 @@ func rmWhiteListAccout(evm *EVM, s types.SpecialTxInput, caller common.Address) 
 }
 
 func setWhiteListAccoutStatus(evm *EVM, s types.SpecialTxInput, caller common.Address) error {
-	if err := WhiteListTxParamCheck(caller, s, (*evm).StateDB); err != nil {
+	if err := WhiteListTxParamCheck(caller, s, (*evm).StateDB, evm.chainConfig.Genaro); err != nil {
 		return err
 	}
 

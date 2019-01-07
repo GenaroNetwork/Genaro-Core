@@ -887,7 +887,13 @@ func IsWhiteListAddress(address common.Address ) bool {
 	return false
 }
 
-func WhiteListTxParamCheck(caller common.Address, s types.SpecialTxInput, state StateDB) error {
+
+func WhiteListTxParamCheck(caller common.Address, s types.SpecialTxInput, state StateDB,  genaroConfig *params.GenaroConfig) error {
+	OfficialAddress := common.HexToAddress(genaroConfig.OfficialAddress)
+	if caller != OfficialAddress {
+		return errors.New("caller address of this transaction is not invalid")
+	}
+
 	if len(s.Address) == 0 {
 		return errors.New("miss param [address]")
 	}
