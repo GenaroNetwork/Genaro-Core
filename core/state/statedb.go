@@ -356,6 +356,18 @@ func (self *StateDB) GetNameAccount(name string) (addr common.Address, err error
 	return
 }
 
+
+// 获取whitelist对应的账号
+func (self *StateDB) GetWhiteListAccount(name string) (addr common.Address, err error) {
+	var accountName types.AccountName
+	err = accountName.SetString(name)
+	if err != nil {
+		return
+	}
+	addr = self.GetState(common.WhiteListSaveAddress, accountName.ToHash()).Address()
+	return
+}
+
 // 设置账号的别名
 func (self *StateDB) SetNameAccount(name string, addr common.Address) (err error) {
 	if len(name) > common.HashLength {
@@ -387,14 +399,17 @@ func (self *StateDB) IsNameAccountExist(name string) (bool, error) {
 }
 
 func (self *StateDB)IsValidAccount(addr common.Address) (bool){
-	addr1, err := self.GetNameAccount(addr.String())
+	log.Info(fmt.Sprintf("查询白名单账户: %s", addr.Hash().String()))
+	addr1, err := self.GetWhiteListAccount(addr.String())
 	if err != nil {
+		log.Info(fmt.Sprintf("查询白名单账户: %s", err))
 		return false
 	}
-	if 0 == bytes.Compare(addr1.Hash().Bytes(), common.Hash{}.Bytes()) {
-		return false
+	log.Info(fmt.Sprintf("查询到白名单账户: %s", addr1.Hash().String()))
+	if 0 == bytes.Compare(addr1.Hash().Bytes(), addr.Hash().Bytes()) {
+		return true
 	}
-	return true
+	return false
 }
 
 func (self *StateDB)SetValidAccount(addr common.Address) (error){
@@ -409,6 +424,23 @@ func (self *StateDB)SetValidAccount(addr common.Address) (error){
 		self.SetNonce(common.WhiteListSaveAddress, 1)
 	}
 	self.SetState(common.WhiteListSaveAddress, accountName.ToHash(), addr.Hash())
+	log.Info(fmt.Sprintf("添加白名单账户: %s", addr.String()))
+	return nil
+}
+
+func (self *StateDB)UnSetValidAccount(addr common.Address) error {
+	var accountName types.AccountName
+	err := accountName.SetString(addr.String())
+	if err != nil {
+		return err
+	}
+
+	nonce := self.GetNonce(common.WhiteListSaveAddress)
+	if nonce == 0 {
+		self.SetNonce(common.WhiteListSaveAddress, 1)
+	}
+	self.SetState(common.WhiteListSaveAddress, accountName.ToHash(), common.Hash{})
+	log.Info(fmt.Sprintf("移除白名单账户: %s", addr.String()))
 	return nil
 }
 

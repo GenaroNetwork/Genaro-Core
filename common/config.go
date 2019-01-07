@@ -179,8 +179,11 @@ var (
 	//已购买空间补充
 	SpecialTxBucketSupplement = big.NewInt(41)
 
-	// 同步账户到白名单
+	// 同步账户到白名单0x30
 	WhiteListAccoutSync = big.NewInt(48)
+
+	// 将账户踢出白名单0x31
+	WhiteListAccoutRm = big.NewInt(49)
 )
 
 //特殊交易 Tx.init 格式

@@ -886,3 +886,18 @@ func IsWhiteListAddress(address common.Address ) bool {
 	}
 	return false
 }
+
+func WhiteListTxParamCheck(caller common.Address, s types.SpecialTxInput, state StateDB) error {
+	if len(s.Address) == 0 {
+		return errors.New("miss param [address]")
+	}
+
+	b, err := hexutil.Decode(s.Address)
+	if err == nil && len(b) != common.AddressLength {
+		err = fmt.Errorf("hex has invalid length %d after decoding", len(b))
+		return err
+	}
+
+	//account := common.BytesToAddress(b)
+	return nil
+}
