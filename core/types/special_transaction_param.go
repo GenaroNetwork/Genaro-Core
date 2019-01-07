@@ -6,7 +6,7 @@ import (
 	"github.com/GenaroNetwork/Genaro-Core/common/hexutil"
 	"github.com/GenaroNetwork/Genaro-Core/crypto"
 	"github.com/GenaroNetwork/Genaro-Core/rlp"
-	"github.com/syndtr/goleveldb/leveldb/errors"
+	//"github.com/syndtr/goleveldb/leveldb/errors"
 	"math"
 	"math/big"
 	"regexp"
@@ -506,9 +506,9 @@ func (name *AccountName) SetBytes(b []byte) {
 }
 
 func (name *AccountName) SetString(nameStr string) error {
-	if len(nameStr) > common.HashLength {
-		return errors.New("String is too long")
-	}
+	//if len(nameStr) > common.HashLength {
+	//	return errors.New("String is too long")
+	//}
 	b := []byte(nameStr)
 	name.reset()
 	name.SetBytes(b)
