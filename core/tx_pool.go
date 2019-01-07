@@ -713,9 +713,9 @@ func (pool *TxPool) dispatchHandlerValidateTx(input []byte, caller common.Addres
 	case common.SpecialTxWithdrawCash.Uint64():
 		return vm.WithdrawCash(caller, pool.currentState, pool.chain.CurrentBlock().Number())
 	case common.WhiteListAccoutSync.Uint64():  //添加白名单账户
-		return vm.WhiteListTxParamCheck(caller, s, pool.currentState)
+		return vm.WhiteListTxParamCheck(caller, s, pool.currentState, pool.chainconfig.Genaro)
 	case common.WhiteListAccoutRm.Uint64(): //踢出白名单账户
-		return vm.WhiteListTxParamCheck(caller, s, pool.currentState)
+		return vm.WhiteListTxParamCheck(caller, s, pool.currentState, pool.chainconfig.Genaro)
 	}
 	return errors.New("undefined type of special transaction")
 }
