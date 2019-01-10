@@ -24,6 +24,7 @@ import (
 	"reflect"
 
 	"bytes"
+	"encoding/binary"
 	"github.com/GenaroNetwork/Genaro-Core/common/hexutil"
 	"github.com/GenaroNetwork/Genaro-Core/crypto/sha3"
 )
@@ -46,6 +47,13 @@ func BytesToHash(b []byte) Hash {
 	h.SetBytes(b)
 	return h
 }
+
+func Uint64ToHash(n uint64) Hash {
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, n)
+	return BytesToHash(b)
+}
+
 func StringToHash(s string) Hash { return BytesToHash([]byte(s)) }
 func BigToHash(b *big.Int) Hash  { return BytesToHash(b.Bytes()) }
 func HexToHash(s string) Hash    { return BytesToHash(FromHex(s)) }
@@ -55,6 +63,12 @@ func (h Hash) Str() string   { return string(h[:]) }
 func (h Hash) Bytes() []byte { return h[:] }
 func (h Hash) Big() *big.Int { return new(big.Int).SetBytes(h[:]) }
 func (h Hash) Hex() string   { return hexutil.Encode(h[:]) }
+
+func (h Hash) Uint64() uint64 {
+	b := h.Bytes()
+	b = b[HashLength-8:]
+	return uint64(binary.BigEndian.Uint64(b))
+}
 
 func (h Hash) Address() (addr Address) {
 	b := h[HashLength-AddressLength:]

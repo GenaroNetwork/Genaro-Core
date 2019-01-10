@@ -2,9 +2,12 @@ package types
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	//"github.com/GenaroNetwork/Genaro-Core/accounts"
 	"github.com/GenaroNetwork/Genaro-Core/common"
 	"github.com/GenaroNetwork/Genaro-Core/common/hexutil"
 	"github.com/GenaroNetwork/Genaro-Core/crypto"
+	"github.com/GenaroNetwork/Genaro-Core/crypto/sha3"
 	"github.com/GenaroNetwork/Genaro-Core/rlp"
 	"github.com/syndtr/goleveldb/leveldb/errors"
 	"math"
@@ -34,6 +37,14 @@ type SpecialTxInput struct {
 	OptionPrice           *hexutil.Big `json:"OptionPrice"`           // 期权的价格
 	IsSell                bool         `json:"IsSell"`                // 期权是否在售
 	GenaroPrice
+	CrossChain
+}
+
+type CrossChain struct {
+	SourceChainID uint64         `json:"SourceChainID"`
+	TargetChainID uint64         `json:"TargetChainID"`
+	Account       common.Address `json:"Account"`
+	Value         *hexutil.Big   `json:"Value"`
 }
 
 type GenaroPrice struct {
@@ -291,6 +302,7 @@ type GenaroData struct {
 	SynchronizeShareKeyArr       map[string]SynchronizeShareKey       `json:"synchronizeShareKeyArr"`
 	SynchronizeShareKey          SynchronizeShareKey                  `json:"synchronizeShareKey"`
 	PromissoryNotes              PromissoryNotes                      `json:"PromissoryNotes"`
+	CrossChainTaskHash           common.Hash                          `json:"CrossChainTaskHash"`
 }
 
 type SynchronizeShareKey struct {
@@ -570,4 +582,97 @@ func (name *AccountName) GetBigPrice() *big.Int {
 	priceBig.Mul(priceBig, common.BaseCompany)
 	priceBig.Add(priceBig, basePrice)
 	return priceBig
+}
+
+// 跨链工单
+type CrossChainTask struct {
+	TaskHash      common.Hash
+	SourceChainID uint64
+	TargetChainID uint64
+	Account       common.Address
+	Value         *big.Int
+	Nonce         uint64
+	Witnesses     map[common.Address][]byte
+}
+
+func (t *CrossChainTask) GenHash() {
+	hasher := sha3.NewKeccak256()
+	rlp.Encode(hasher, []interface{}{
+		t.SourceChainID,
+		t.TargetChainID,
+		t.Account,
+		t.Value.String(),
+		t.Nonce,
+	})
+	hasher.Sum(t.TaskHash[:0])
+}
+
+//type SignerFn func(accounts.Account, []byte) ([]byte, error)
+//
+//func (t *CrossChainTask) Sign(witness common.Address, signFn SignerFn) (sig []byte, err error) {
+//	sig, err = signFn(accounts.Account{Address: witness}, t.TaskHash.Bytes())
+//	if err != nil {
+//		return
+//	}
+//	return
+//}
+//
+//func (t *CrossChainTask) Sign1(witness common.Address, signFn SignerFn, needs int) error {
+//	l := len(t.Witnesses)
+//	if l >= needs {
+//		return errors.New("Enough witnesses")
+//	}
+//	sighash, err := signFn(accounts.Account{Address: witness}, t.TaskHash.Bytes())
+//	if err != nil {
+//		return err
+//	}
+//	t.Witnesses[witness] = sighash
+//	return nil
+//}
+
+func (t *CrossChainTask) Sign2(prv *ecdsa.PrivateKey) (sig []byte, err error) {
+	sig, err = crypto.Sign(t.TaskHash.Bytes(), prv)
+	if err != nil {
+		return
+	}
+	return
+}
+
+func (t *CrossChainTask) AddSign(witness common.Address, sign []byte) {
+	t.Witnesses[witness] = sign
+}
+
+func (t *CrossChainTask) Ecrecover(sign []byte) (signer common.Address, err error) {
+	pubkey, err := crypto.Ecrecover(t.TaskHash.Bytes(), sign)
+	if err != nil {
+		return
+	}
+	copy(signer[:], crypto.Keccak256(pubkey[1:])[12:])
+	return
+}
+
+func (t *CrossChainTask) CheckSign(witness common.Address, sign []byte) (bool, error) {
+	signer, err := t.Ecrecover(sign)
+	if err != nil {
+		return false, err
+	}
+	if signer == witness {
+		return true, nil
+	}
+	return false, nil
+}
+
+func (t *CrossChainTask) GetWitnessLenth() int {
+	return len(t.Witnesses)
+}
+
+func BuildChainTask(sourceChainID uint64, targetChainID uint64, account common.Address, value *big.Int, nonce uint64) *CrossChainTask {
+	crossChainTask := new(CrossChainTask)
+	crossChainTask.Value = value
+	crossChainTask.SourceChainID = sourceChainID
+	crossChainTask.TargetChainID = targetChainID
+	crossChainTask.Account = account
+	crossChainTask.Nonce = nonce
+	crossChainTask.GenHash()
+	return crossChainTask
 }

@@ -228,6 +228,38 @@ func (s *PublicBlockChainAPI) GetMainAccountRank(ctx context.Context, blockNr rp
 	return committees
 }
 
+// 获取跨链工单信息
+func (s *PublicBlockChainAPI) GetCrossChainTask(ctx context.Context, hashStr string, blockNr rpc.BlockNumber) *types.CrossChainTask {
+	hash := common.HexToHash(hashStr)
+	//state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
+	//if state == nil || err != nil {
+	//	return nil
+	//}
+	var tx *types.Transaction
+
+	// Retrieve a finalized transaction, or a pooled otherwise
+	if tx, _, _, _ = core.GetTransaction(s.b.ChainDb(), hash); tx == nil {
+		if tx = s.b.GetPoolTransaction(hash); tx == nil {
+			// Transaction not found anywhere, abort
+			return nil
+		}
+	}
+
+	var sti types.SpecialTxInput
+	err := json.Unmarshal(tx.Data(), &sti)
+	if err != nil {
+		log.Error("special tx error： the extraData parameters of the wrong format")
+		return nil
+	}
+	if sti.Type.ToInt().Uint64() != common.SpecialTxSubmitCrossChainTask.Uint64() {
+		return nil
+	}
+
+	crossChainTask := types.BuildChainTask(sti.CrossChain.SourceChainID, sti.CrossChain.TargetChainID, sti.CrossChain.Account, sti.CrossChain.Value.ToInt(), tx.Nonce())
+
+	return crossChainTask
+}
+
 // PrivateAccountAPI provides an API to access accounts managed by this node.
 // It offers methods to create, (un)lock en list accounts. Some methods accept
 // passwords and are therefore considered private by default.

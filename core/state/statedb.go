@@ -1644,3 +1644,91 @@ func (self *StateDB) TurnBuyPromissoryNotes(orderId common.Hash, optionPrice *he
 	}
 	return false
 }
+
+// 设置账户当前工单
+func (self *StateDB) SetCrossChainTaskHash(addr common.Address, hash common.Hash) bool {
+	stateObject := self.GetOrNewStateObject(addr)
+	if stateObject != nil {
+		stateObject.SetCrossChainTaskHash(hash)
+		return true
+	}
+	return false
+}
+
+// 获取账户当前工单
+func (self *StateDB) GetCrossChainTaskHash(addr common.Address) common.Hash {
+	stateObject := self.GetOrNewStateObject(addr)
+	if stateObject != nil {
+		return stateObject.GetCrossChainTaskHash()
+	}
+	return common.Hash{}
+}
+
+// 加入工单列表
+func (self *StateDB) AddCrossChainTaskList(hash common.Hash) {
+	crossChainHead := self.GetState(common.CrossChainSaveAddress, common.CrossChainHead)
+	if common.EmptyHash(crossChainHead) {
+		self.SetState(common.CrossChainSaveAddress, common.CrossChainHead, hash)
+	}
+
+	crossChainPtr := self.GetState(common.CrossChainSaveAddress, common.CrossChainPtr)
+	if common.EmptyHash(crossChainPtr) {
+		self.SetState(common.CrossChainSaveAddress, common.CrossChainPtr, hash)
+	}
+
+	crossChainEnd := self.GetState(common.CrossChainSaveAddress, common.CrossChainEnd)
+	if common.EmptyHash(crossChainEnd) {
+		self.SetState(common.CrossChainSaveAddress, common.CrossChainEnd, hash)
+	} else {
+		self.SetState(common.CrossChainSaveAddress, crossChainEnd, hash)
+		self.SetState(common.CrossChainSaveAddress, common.CrossChainEnd, hash)
+	}
+}
+
+// 获取工单列表头
+func (self *StateDB) GetCrossChainTaskListHead() common.Hash {
+	crossChainHead := self.GetState(common.CrossChainSaveAddress, common.CrossChainHead)
+	return crossChainHead
+}
+
+// 获取工单列表指针
+func (self *StateDB) GetCrossChainTaskListPtr() common.Hash {
+	crossChainPtr := self.GetState(common.CrossChainSaveAddress, common.CrossChainPtr)
+	return crossChainPtr
+}
+
+// 获取工单列表尾
+func (self *StateDB) GetCrossChainTaskListEnd() common.Hash {
+	crossChainEnd := self.GetState(common.CrossChainSaveAddress, common.CrossChainEnd)
+	return crossChainEnd
+}
+
+// 获取工单列表中下一项
+func (self *StateDB) GetCrossChainTaskListNext(hash common.Hash) common.Hash {
+	return self.GetState(common.CrossChainSaveAddress, hash)
+}
+
+// 工单列表指针移动
+func (self *StateDB) AddCrossChainTaskListPtr() bool {
+	crossChainPtr := self.GetState(common.CrossChainSaveAddress, common.CrossChainPtr)
+	if !common.EmptyHash(crossChainPtr) {
+		next := self.GetState(common.CrossChainSaveAddress, crossChainPtr)
+		if !common.EmptyHash(next) {
+			self.SetState(common.CrossChainSaveAddress, common.CrossChainPtr, next)
+			return true
+		}
+	}
+	return false
+}
+
+// 存储工单的区块号
+func (self *StateDB) SetCrossChainTaskBlockNum(hash common.Hash, blockNum uint64) {
+	blockNumHash := common.Uint64ToHash(blockNum)
+	self.SetState(common.CrossChainBlocknumSaveAddress, hash, blockNumHash)
+}
+
+// 获取工单的区块号
+func (self *StateDB) GetCrossChainTaskBlockNum(hash common.Hash) uint64 {
+	blockNumHash := self.GetState(common.CrossChainBlocknumSaveAddress, hash)
+	return blockNumHash.Uint64()
+}

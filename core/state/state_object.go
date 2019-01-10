@@ -20,15 +20,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
-	"math/big"
-
 	"github.com/GenaroNetwork/Genaro-Core/common"
 	"github.com/GenaroNetwork/Genaro-Core/common/hexutil"
 	"github.com/GenaroNetwork/Genaro-Core/core/types"
 	"github.com/GenaroNetwork/Genaro-Core/crypto"
 	"github.com/GenaroNetwork/Genaro-Core/rlp"
 	"github.com/pkg/errors"
+	"io"
+	"math/big"
 	"sort"
 	"time"
 )
@@ -2099,4 +2098,37 @@ func (self *stateObject) TurnBuyPromissoryNotes(orderId common.Hash, optionPrice
 		self.onDirty = nil
 	}
 	return true
+}
+
+// 设置工单hash
+func (self *stateObject) SetCrossChainTaskHash(hash common.Hash) {
+	var genaroData types.GenaroData
+	if self.data.CodeHash == nil {
+		genaroData = types.GenaroData{
+			CrossChainTaskHash: hash,
+		}
+	} else {
+		json.Unmarshal(self.data.CodeHash, &genaroData)
+		genaroData.CrossChainTaskHash = hash
+	}
+
+	b, _ := json.Marshal(genaroData)
+	self.code = nil
+	self.data.CodeHash = b[:]
+	self.dirtyCode = true
+	if self.onDirty != nil {
+		self.onDirty(self.Address())
+		self.onDirty = nil
+	}
+}
+
+// 获取工单hash
+func (self *stateObject) GetCrossChainTaskHash() common.Hash {
+	if self.data.CodeHash != nil {
+		var genaroData types.GenaroData
+		json.Unmarshal(self.data.CodeHash, &genaroData)
+		return genaroData.CrossChainTaskHash
+	}
+
+	return common.Hash{}
 }

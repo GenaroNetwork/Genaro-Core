@@ -179,6 +179,18 @@ type StateDB interface {
 	SetNameAccount(name string, addr common.Address) (err error)
 	IsNameAccountExist(name string) (bool, error)
 	HasName(common.Address, string) bool
+
+	// 跨链工单
+	SetCrossChainTaskHash(addr common.Address,hash common.Hash) bool
+	GetCrossChainTaskHash(addr common.Address) common.Hash
+	AddCrossChainTaskList(hash common.Hash)
+	GetCrossChainTaskListHead() common.Hash
+	GetCrossChainTaskListPtr() common.Hash
+	GetCrossChainTaskListEnd() common.Hash
+	GetCrossChainTaskListNext(hash common.Hash) common.Hash
+	AddCrossChainTaskListPtr() bool
+	SetCrossChainTaskBlockNum(hash common.Hash, blockNum uint64)
+	GetCrossChainTaskBlockNum(hash common.Hash) uint64
 }
 
 // CallContext provides a basic interface for the EVM calling conventions. The EVM EVM

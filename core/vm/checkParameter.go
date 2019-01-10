@@ -910,3 +910,25 @@ func CheckUnsubscribeNameTxStatus(caller common.Address, s types.SpecialTxInput,
 
 	return nil
 }
+
+// 检测跨链交易的参数是否正确
+func CheckSubmitCrossChainTaskTxStatus(caller common.Address, crossChainTask *types.CrossChainTask, state StateDB) error {
+	if caller != crossChainTask.Account {
+		return errors.New("User mismatch")
+	}
+	balance := state.GetBalance(caller)
+	if crossChainTask.Value.Cmp(balance) > 0 {
+		return errors.New("There is not enough balance")
+	}
+
+	nowTaskHash := state.GetCrossChainTaskHash(caller)
+	if !common.EmptyHash(nowTaskHash) {
+		return errors.New("This task is in progress")
+	}
+
+	if !common.EmptyHash(state.GetCrossChainTaskListNext(crossChainTask.TaskHash)) || state.GetCrossChainTaskListEnd() == crossChainTask.TaskHash {
+		return errors.New("This task already exist")
+	}
+
+	return nil
+}

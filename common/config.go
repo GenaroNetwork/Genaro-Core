@@ -76,9 +76,22 @@ var (
 
 	// 账户的别名存储
 	NameSpaceSaveAddress Address = HexToAddress("0xb000000000000000000000000000000000000000")
+
+	// 跨链工单任务的存储
+	CrossChainSaveAddress Address = HexToAddress("0xc000000000000000000000000000000000000000")
+
+	// 跨链工单任务区块号的存储
+	CrossChainBlocknumSaveAddress Address = HexToAddress("0xd000000000000000000000000000000000000000")
 )
 
-var SpecialAddressList = []Address{CandidateSaveAddress, BackStakeAddress, LastSynStateSaveAddress, StakeNode2StakeAddress, GenaroPriceAddress, SpecialSyncAddress, RewardsSaveAddress, BindingSaveAddress, ForbidBackStakeSaveAddress, NameSpaceSaveAddress}
+// 工单列表常量
+var (
+	CrossChainHead Hash = HexToHash("0x1")
+	CrossChainPtr Hash = HexToHash("0x2")
+	CrossChainEnd Hash = HexToHash("0x3")
+)
+
+var SpecialAddressList = []Address{CandidateSaveAddress, BackStakeAddress, LastSynStateSaveAddress, StakeNode2StakeAddress, GenaroPriceAddress, SpecialSyncAddress, RewardsSaveAddress, BindingSaveAddress, ForbidBackStakeSaveAddress, NameSpaceSaveAddress, CrossChainSaveAddress}
 
 var (
 
@@ -153,6 +166,9 @@ var (
 
 	// 子账号绑定
 	SpecialTxAccountBindingBysub = big.NewInt(26)
+
+	// 发起转账工单
+	SpecialTxSubmitCrossChainTask = big.NewInt(27)
 
 	/************期权交易类型**************/
 	//提现

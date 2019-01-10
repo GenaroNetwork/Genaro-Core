@@ -279,6 +279,8 @@ func dispatchHandler(evm *EVM, caller common.Address, input []byte) error {
 		err = unsubscribeNameTxStatus(evm, s, caller)
 	case common.SpecialTxAccountBindingBysub.Uint64(): // 子账号绑定
 		err = accountBindingBysub(evm, s, caller)
+	case common.SpecialTxSubmitCrossChainTask.Uint64(): // 发起跨链转账工单
+		err = submitCrossChainTask(evm, s, caller)
 	case common.SpecialTxRevoke.Uint64(): // 撤销期权交易
 		err = revokePromissoryNotesTx(evm, s, caller)
 	case common.SpecialTxWithdrawCash.Uint64(): //提现
@@ -302,6 +304,21 @@ func dispatchHandler(evm *EVM, caller common.Address, input []byte) error {
 		log.Info(fmt.Sprintf("special transaction param：%s", string(input)))
 	}
 	return err
+}
+
+func submitCrossChainTask(evm *EVM, s types.SpecialTxInput, caller common.Address) error {
+	nonce := (*evm).StateDB.GetNonce(caller)
+	crossChainTask := types.BuildChainTask(s.CrossChain.SourceChainID, s.CrossChain.TargetChainID, s.CrossChain.Account, s.CrossChain.Value.ToInt(), nonce)
+	if err := CheckSubmitCrossChainTaskTxStatus(caller, crossChainTask, (*evm).StateDB); err != nil {
+		return err
+	}
+
+	(*evm).StateDB.SetCrossChainTaskHash(caller,crossChainTask.TaskHash)
+	(*evm).StateDB.SetCrossChainTaskBlockNum(crossChainTask.TaskHash,(*evm).BlockNumber.Uint64())
+	(*evm).StateDB.AddCrossChainTaskList(crossChainTask.TaskHash)
+
+
+	return nil
 }
 
 func registerName(evm *EVM, s types.SpecialTxInput, caller common.Address) error {
