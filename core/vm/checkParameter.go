@@ -912,7 +912,10 @@ func CheckUnsubscribeNameTxStatus(caller common.Address, s types.SpecialTxInput,
 }
 
 // 检测跨链交易的参数是否正确
-func CheckSubmitCrossChainTaskTxStatus(caller common.Address, crossChainTask *types.CrossChainTask, state StateDB) error {
+func CheckSubmitCrossChainTaskTxStatus(caller common.Address, crossChainTask *types.CrossChainTask, state StateDB, config *params.ChainConfig) error {
+	if crossChainTask.SourceChainID != config.ChainId.Uint64() {
+		return errors.New("Chain ID mismatch")
+	}
 	if caller != crossChainTask.Account {
 		return errors.New("User mismatch")
 	}

@@ -260,6 +260,27 @@ func (s *PublicBlockChainAPI) GetCrossChainTask(ctx context.Context, hashStr str
 	return crossChainTask
 }
 
+// 对跨链工单进行签名
+func (s *PublicBlockChainAPI) SigCrossChainTask(ctx context.Context, witness common.Address, hashStr string, blockNr rpc.BlockNumber) bool {
+	task := s.GetCrossChainTask(ctx, hashStr, blockNr)
+	if task == nil {
+		log.Error("Cross chain task is not exist")
+		return false
+	}
+	wallet, err := s.b.AccountManager().Find(accounts.Account{Address: task.Account})
+	if wallet == nil || err != nil {
+		log.Error("Account unavailable locally", "err", err)
+		return false
+	}
+	sig, err := wallet.SignHash(accounts.Account{Address: witness}, task.TaskHash.Bytes())
+	if err != nil {
+		log.Error("Signature failed", "err", err)
+		return false
+	}
+	log.Info(common.Bytes2Hex(sig))
+	return true
+}
+
 // PrivateAccountAPI provides an API to access accounts managed by this node.
 // It offers methods to create, (un)lock en list accounts. Some methods accept
 // passwords and are therefore considered private by default.

@@ -309,16 +309,20 @@ func dispatchHandler(evm *EVM, caller common.Address, input []byte) error {
 func submitCrossChainTask(evm *EVM, s types.SpecialTxInput, caller common.Address) error {
 	nonce := (*evm).StateDB.GetNonce(caller)
 	crossChainTask := types.BuildChainTask(s.CrossChain.SourceChainID, s.CrossChain.TargetChainID, s.CrossChain.Account, s.CrossChain.Value.ToInt(), nonce)
-	if err := CheckSubmitCrossChainTaskTxStatus(caller, crossChainTask, (*evm).StateDB); err != nil {
+	if err := CheckSubmitCrossChainTaskTxStatus(caller, crossChainTask, (*evm).StateDB, (*evm).chainConfig); err != nil {
 		return err
 	}
 
 	(*evm).StateDB.SetCrossChainTaskHash(caller,crossChainTask.TaskHash)
 	(*evm).StateDB.SetCrossChainTaskBlockNum(crossChainTask.TaskHash,(*evm).BlockNumber.Uint64())
 	(*evm).StateDB.AddCrossChainTaskList(crossChainTask.TaskHash)
-
+	(*evm).StateDB.SubBalance(caller, crossChainTask.Value)
 
 	return nil
+}
+
+func sigCrossChainTask(evm *EVM, s types.SpecialTxInput, caller common.Address) {
+
 }
 
 func registerName(evm *EVM, s types.SpecialTxInput, caller common.Address) error {

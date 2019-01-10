@@ -1732,3 +1732,7 @@ func (self *StateDB) GetCrossChainTaskBlockNum(hash common.Hash) uint64 {
 	blockNumHash := self.GetState(common.CrossChainBlocknumSaveAddress, hash)
 	return blockNumHash.Uint64()
 }
+
+func (self *StateDB) CrossChainSig() {
+
+}

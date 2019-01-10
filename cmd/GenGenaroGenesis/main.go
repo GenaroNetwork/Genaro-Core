@@ -19,6 +19,7 @@ import (
 	"log"
 	"math/big"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -35,6 +36,7 @@ var SynStateAccount string               // 用于同步
 var HeftAccount string                   // 用于heft设置
 var BindingAccount string                // 用于账号绑定
 var OfficialAddress string               // 官方账号
+var SigAddresses []string                // 用于跨链签名的账号
 
 func initarg() {
 	flag.StringVar(&accountfile, "f", "account.json", "account file")
@@ -238,6 +240,10 @@ func parseConfig(fileData []byte) {
 	fmt.Println("BindingAccount:", BindingAccount)
 	OfficialAddress = gjson.GetBytes(fileData, "config.OfficialAddress").String()
 	fmt.Println("OfficialAddress:", OfficialAddress)
+
+	SigAddressesStr := gjson.GetBytes(fileData, "config.SigAddresses").String()
+	SigAddresses = strings.Split(SigAddressesStr, ",")
+	fmt.Println("SigAddresses:", SigAddresses)
 }
 
 func main() {
@@ -272,6 +278,7 @@ func main() {
 			OptionTxMemorySize:  20,                  //the number of save option tx
 			PromissoryNotePrice: PromissoryNotePrice, // Promissory Note Price
 			OfficialAddress:     OfficialAddress,
+			SigAddresses:        SigAddresses,
 		},
 	}
 	genesis := new(core.Genesis)
