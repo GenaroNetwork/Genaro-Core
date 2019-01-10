@@ -693,7 +693,7 @@ func updateSpecialBlock(config *params.GenaroConfig, header *types.Header, thiss
 		}
 		SetCommitteeAccountBinding(header, committeeAccountBinding)
 		//CoinActualRewards and StorageActualRewards should update per epoch
-		updateEpochRewards(thisstate)
+		//updateEpochRewards(thisstate)
 	}
 
 	// 一年时间到
@@ -723,7 +723,7 @@ func (g *Genaro) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	log.Info("Finalize:" + header.Number.String())
 	//commit rank
 	//blockNumber := header.Number.Uint64()
-	//updateSpecialBlock(g.config, header, state)
+	updateSpecialBlock(g.config, header, state)
 
 	// update LastSynBlockNum
 	//extraData := UnmarshalToExtra(header)
