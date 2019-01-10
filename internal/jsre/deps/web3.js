@@ -5504,6 +5504,14 @@ var methods = function () {
         outputFormatter: formatters.outputBigNumberFormatter
     });
 
+    var getToken = new Method({
+        name: 'getToken',
+        call: 'eth_getToken',
+        params: 2,
+        inputFormatter: [formatters.inputAddressFormatter, formatters.inputDefaultBlockNumberFormatter],
+        outputFormatter: formatters.outputBigNumberFormatter
+    });
+
     var getHeftRangeDiff = new Method({
         name: 'getHeftRangeDiff',
         call: 'eth_getHeftRangeDiff',
@@ -5711,6 +5719,7 @@ var methods = function () {
         getStake,
         getStakeRangeDiff,
         getHeft,
+        getToken,
         getHeftRangeDiff,
         getCandidates,
         getCommitteeRank,

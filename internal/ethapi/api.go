@@ -672,6 +672,11 @@ func (s *PublicBlockChainAPI) GetStake(ctx context.Context, address common.Addre
 	return
 }
 
+func (s *PublicBlockChainAPI) GetToken(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (b string, err error) {
+	b =GetToken(string(address[:]))
+	return
+}
+
 // getStakeRangeDiff returns the stakeRangeDiff of ether for the given address in the state of the
 // given block number. The rpc.LatestBlockNumber and rpc.PendingBlockNumber meta
 // block numbers are also allowed.
