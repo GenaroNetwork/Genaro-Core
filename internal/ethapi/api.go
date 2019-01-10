@@ -267,7 +267,7 @@ func (s *PublicBlockChainAPI) SigCrossChainTask(ctx context.Context, witness com
 		log.Error("Cross chain task is not exist")
 		return false
 	}
-	wallet, err := s.b.AccountManager().Find(accounts.Account{Address: task.Account})
+	wallet, err := s.b.AccountManager().Find(accounts.Account{Address: witness})
 	if wallet == nil || err != nil {
 		log.Error("Account unavailable locally", "err", err)
 		return false
