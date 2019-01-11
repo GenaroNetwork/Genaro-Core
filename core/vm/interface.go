@@ -181,7 +181,7 @@ type StateDB interface {
 	HasName(common.Address, string) bool
 
 	// 跨链工单
-	SetCrossChainTaskHash(addr common.Address,hash common.Hash) bool
+	SetCrossChainTaskHash(addr common.Address, hash common.Hash) bool
 	GetCrossChainTaskHash(addr common.Address) common.Hash
 	AddCrossChainTaskList(hash common.Hash)
 	GetCrossChainTaskListHead() common.Hash

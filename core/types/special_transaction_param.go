@@ -674,5 +674,6 @@ func BuildChainTask(sourceChainID uint64, targetChainID uint64, account common.A
 	crossChainTask.Account = account
 	crossChainTask.Nonce = nonce
 	crossChainTask.GenHash()
+	crossChainTask.Witnesses = make(map[common.Address][]byte)
 	return crossChainTask
 }

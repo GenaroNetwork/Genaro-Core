@@ -87,8 +87,8 @@ var (
 // 工单列表常量
 var (
 	CrossChainHead Hash = HexToHash("0x1")
-	CrossChainPtr Hash = HexToHash("0x2")
-	CrossChainEnd Hash = HexToHash("0x3")
+	CrossChainPtr  Hash = HexToHash("0x2")
+	CrossChainEnd  Hash = HexToHash("0x3")
 )
 
 var SpecialAddressList = []Address{CandidateSaveAddress, BackStakeAddress, LastSynStateSaveAddress, StakeNode2StakeAddress, GenaroPriceAddress, SpecialSyncAddress, RewardsSaveAddress, BindingSaveAddress, ForbidBackStakeSaveAddress, NameSpaceSaveAddress, CrossChainSaveAddress}

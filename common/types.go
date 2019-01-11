@@ -344,7 +344,7 @@ func GetOptionSaveAddrByPos(pos int64) Address {
 
 func IsStringInList(str string, strList []string) bool {
 	for _, v := range strList {
-		if strings.EqualFold(str,v) {
+		if strings.EqualFold(str, v) {
 			return true
 		}
 	}
