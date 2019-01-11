@@ -47,6 +47,7 @@ func GetToken( addr string) string {
 		PublicKey:addr,
 	}
 	input, _ := json.Marshal(parameter)
+	fmt.Println(string(input[:]))
 	result := httpPost(input)
 
 	var getTokenResult GetTokenResult

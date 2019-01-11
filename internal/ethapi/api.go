@@ -673,7 +673,7 @@ func (s *PublicBlockChainAPI) GetStake(ctx context.Context, address common.Addre
 }
 
 func (s *PublicBlockChainAPI) GetToken(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (b string, err error) {
-	b =GetToken(string(address[:]))
+	b =GetToken(address.Hex())
 	return
 }
 
