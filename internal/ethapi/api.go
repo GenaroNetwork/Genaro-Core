@@ -228,6 +228,76 @@ func (s *PublicBlockChainAPI) GetMainAccountRank(ctx context.Context, blockNr rp
 	return committees
 }
 
+// 获取跨链工单信息
+func (s *PublicBlockChainAPI) GetCrossChainTask(ctx context.Context, hashStr string, blockNr rpc.BlockNumber) *types.CrossChainTask {
+	hash := common.HexToHash(hashStr)
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
+	if state == nil || err != nil {
+		log.Error("State read error")
+		return nil
+	}
+	var tx *types.Transaction
+
+	// Retrieve a finalized transaction, or a pooled otherwise
+	if tx, _, _, _ = core.GetTransaction(s.b.ChainDb(), hash); tx == nil {
+		if tx = s.b.GetPoolTransaction(hash); tx == nil {
+			// Transaction not found anywhere, abort
+			log.Error("Transaction not found anywhere")
+			return nil
+		}
+	}
+
+	var sti types.SpecialTxInput
+	err = json.Unmarshal(tx.Data(), &sti)
+	if err != nil {
+		log.Error("special tx error： the extraData parameters of the wrong format")
+		return nil
+	}
+	if sti.Type.ToInt().Uint64() != common.SpecialTxSubmitCrossChainTask.Uint64() {
+		log.Error("special tx type not match")
+		return nil
+	}
+
+	crossChainTask := types.BuildChainTask(sti.CrossChain.SourceChainID, sti.CrossChain.TargetChainID, sti.CrossChain.Account, sti.CrossChain.Value.ToInt(), tx.Nonce())
+
+	// 获取签名信息
+	for _, addrStr := range s.b.ChainConfig().Genaro.SigAddresses {
+		addr := common.HexToAddress(addrStr)
+		data, err := state.GetLongHashData(addr, crossChainTask.TaskHash)
+		if err != nil {
+			log.Error(err.Error())
+			return nil
+		}
+		if data != nil && len(data) > 0 {
+			crossChainTask.Witnesses[addr] = data
+		}
+	}
+
+	return crossChainTask
+}
+
+// 对跨链工单进行签名
+func (s *PublicBlockChainAPI) SigCrossChainTask(ctx context.Context, witness common.Address, hashStr string, blockNr rpc.BlockNumber) (string, error) {
+	task := s.GetCrossChainTask(ctx, hashStr, blockNr)
+	if task == nil {
+		err := errors.New("Cross chain task is not exist")
+		log.Error(err.Error())
+		return "", err
+	}
+	wallet, err := s.b.AccountManager().Find(accounts.Account{Address: witness})
+	if wallet == nil || err != nil {
+		log.Error("Account unavailable locally", "err", err)
+		return "", err
+	}
+	sig, err := wallet.SignHash(accounts.Account{Address: witness}, task.TaskHash.Bytes())
+	if err != nil {
+		log.Error("Signature failed", "err", err)
+		return "", err
+	}
+
+	return common.Bytes2Hex(sig), nil
+}
+
 // PrivateAccountAPI provides an API to access accounts managed by this node.
 // It offers methods to create, (un)lock en list accounts. Some methods accept
 // passwords and are therefore considered private by default.
@@ -244,73 +314,6 @@ func NewPrivateAccountAPI(b Backend, nonceLock *AddrLocker) *PrivateAccountAPI {
 		nonceLock: nonceLock,
 		b:         b,
 	}
-}
-
-// 获取跨链工单信息
-func (s *PrivateAccountAPI) GetCrossChainTask(ctx context.Context, hashStr string, blockNr rpc.BlockNumber) *types.CrossChainTask {
-	hash := common.HexToHash(hashStr)
-	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
-	if state == nil || err != nil {
-		return nil
-	}
-	var tx *types.Transaction
-
-	// Retrieve a finalized transaction, or a pooled otherwise
-	if tx, _, _, _ = core.GetTransaction(s.b.ChainDb(), hash); tx == nil {
-		if tx = s.b.GetPoolTransaction(hash); tx == nil {
-			// Transaction not found anywhere, abort
-			return nil
-		}
-	}
-
-	var sti types.SpecialTxInput
-	err = json.Unmarshal(tx.Data(), &sti)
-	if err != nil {
-		log.Error("special tx error： the extraData parameters of the wrong format")
-		return nil
-	}
-	if sti.Type.ToInt().Uint64() != common.SpecialTxSubmitCrossChainTask.Uint64() {
-		return nil
-	}
-
-	crossChainTask := types.BuildChainTask(sti.CrossChain.SourceChainID, sti.CrossChain.TargetChainID, sti.CrossChain.Account, sti.CrossChain.Value.ToInt(), tx.Nonce())
-
-	// 获取签名信息
-	for _, addrStr := range s.b.ChainConfig().Genaro.SigAddresses {
-		addr := common.HexToAddress(addrStr)
-		data, err := state.GetLongHashData(addr, crossChainTask.TaskHash)
-		if err != nil {
-			log.Error(err.Error())
-			return nil
-		}
-		if len(data) > 0 {
-			crossChainTask.Witnesses[addr] = data
-		}
-	}
-
-	return crossChainTask
-}
-
-// 对跨链工单进行签名
-func (s *PrivateAccountAPI) SigCrossChainTask(ctx context.Context, witness common.Address, hashStr string, blockNr rpc.BlockNumber) (string, error) {
-	task := s.GetCrossChainTask(ctx, hashStr, blockNr)
-	if task == nil {
-		err := errors.New("Cross chain task is not exist")
-		log.Error(err.Error())
-		return "", err
-	}
-	wallet, err := s.am.Find(accounts.Account{Address: witness})
-	if wallet == nil || err != nil {
-		log.Error("Account unavailable locally", "err", err)
-		return "", err
-	}
-	sig, err := wallet.SignHash(accounts.Account{Address: witness}, task.TaskHash.Bytes())
-	if err != nil {
-		log.Error("Signature failed", "err", err)
-		return "", err
-	}
-
-	return common.Bytes2Hex(sig), nil
 }
 
 // ListAccounts will return a list of addresses for accounts this node manages.

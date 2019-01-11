@@ -1771,12 +1771,15 @@ func (self *StateDB) GetLongHashData(address common.Address, hash common.Hash) (
 	dataList := make([][]byte, 1)
 
 	saveHash := hash
+	saveHash = self.GetState(address, saveHash)
+	if common.EmptyHash(saveHash) {
+		return nil, nil
+	}
 	for {
-		saveHash := self.GetState(address, saveHash)
+		dataList = append(dataList, saveHash.Bytes())
+		saveHash = self.GetState(address, saveHash)
 		if common.EmptyHash(saveHash) {
 			break
-		} else {
-			dataList = append(dataList, saveHash.Bytes())
 		}
 	}
 
@@ -1791,4 +1794,3 @@ func (self *StateDB) GetLongHashData(address common.Address, hash common.Hash) (
 	}
 	return []byte(dataStr), nil
 }
-
