@@ -298,6 +298,19 @@ func (s *PublicBlockChainAPI) SigCrossChainTask(ctx context.Context, witness com
 	return common.Bytes2Hex(sig), nil
 }
 
+func (s *PublicBlockChainAPI) GetLongHashData(ctx context.Context, address common.Address, hashStr string, blockNr rpc.BlockNumber) (string, error) {
+	hash := common.HexToHash(hashStr)
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
+	if state == nil || err != nil {
+		return "", err
+	}
+	data, err := state.GetLongHashData(address, hash)
+	if err != nil {
+		return "", err
+	}
+	return common.Bytes2Hex(data), nil
+}
+
 // PrivateAccountAPI provides an API to access accounts managed by this node.
 // It offers methods to create, (un)lock en list accounts. Some methods accept
 // passwords and are therefore considered private by default.

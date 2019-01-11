@@ -1744,9 +1744,9 @@ func (self *StateDB) SetLongHashData(address common.Address, hash common.Hash, d
 
 	dataList := make([][]byte, 1)
 	for {
-		if len(data) > 32 {
-			d := data[:32]
-			data = data[32:]
+		if len(data) > common.HashLength {
+			d := data[:common.HashLength]
+			data = data[common.HashLength:]
 			h := self.GetState(address, common.BytesToHashLeft(d))
 			if !common.EmptyHash(h) {
 				return false
