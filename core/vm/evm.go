@@ -315,7 +315,10 @@ func submitCrossChainTask(evm *EVM, s types.SpecialTxInput, caller common.Addres
 		return err
 	}
 
-	(*evm).StateDB.SetCrossChainTaskHash(caller, crossChainTask.TaskHash)
+	ok := (*evm).StateDB.SetCrossChainTaskHash(caller, crossChainTask.TaskHash)
+	if !ok {
+		return errors.New("Submit task failed")
+	}
 	(*evm).StateDB.SetCrossChainTaskBlockNum(crossChainTask.TaskHash, (*evm).BlockNumber.Uint64())
 	(*evm).StateDB.AddCrossChainTaskList(crossChainTask.TaskHash)
 	(*evm).StateDB.SubBalance(caller, crossChainTask.Value)

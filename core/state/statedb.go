@@ -1742,18 +1742,19 @@ func (self *StateDB) SetLongHashData(address common.Address, hash common.Hash, d
 		return false
 	}
 
-	dataList := make([][]byte, 1)
+	dataBuf := b.Bytes()
+	dataList := make([][]byte, 0)
 	for {
-		if len(data) > common.HashLength {
-			d := data[:common.HashLength]
-			data = data[common.HashLength:]
+		if len(dataBuf) > common.HashLength {
+			d := dataBuf[:common.HashLength]
+			dataBuf = dataBuf[common.HashLength:]
 			h := self.GetState(address, common.BytesToHashLeft(d))
 			if !common.EmptyHash(h) {
 				return false
 			}
 			dataList = append(dataList, d)
 		} else {
-			dataList = append(dataList, data)
+			dataList = append(dataList, dataBuf)
 			break
 		}
 	}
@@ -1768,7 +1769,7 @@ func (self *StateDB) SetLongHashData(address common.Address, hash common.Hash, d
 
 // 获取长数据(hash 类数据)
 func (self *StateDB) GetLongHashData(address common.Address, hash common.Hash) ([]byte, error) {
-	dataList := make([][]byte, 1)
+	dataList := make([][]byte, 0)
 
 	saveHash := hash
 	saveHash = self.GetState(address, saveHash)
