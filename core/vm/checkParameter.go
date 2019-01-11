@@ -935,3 +935,17 @@ func CheckSubmitCrossChainTaskTxStatus(caller common.Address, crossChainTask *ty
 
 	return nil
 }
+
+// 检测跨链签名交易参数
+func CheckSigCrossChainTask(caller common.Address, s types.SpecialTxInput, state StateDB, config *params.ChainConfig, blockNum uint64) error {
+	if !common.IsStringInList(caller.String(), config.Genaro.SigAddresses) {
+		return errors.New("This is not signature account")
+	}
+
+	taskBlockNum := state.GetCrossChainTaskBlockNum(s.CrossChainTaskHash)
+	if (blockNum - taskBlockNum) < (config.Genaro.CommitteeMaxSize * 3) {
+		return errors.New("Task block pv is not enough")
+	}
+
+	return nil
+}

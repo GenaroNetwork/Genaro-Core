@@ -27,6 +27,7 @@ import (
 	"encoding/binary"
 	"github.com/GenaroNetwork/Genaro-Core/common/hexutil"
 	"github.com/GenaroNetwork/Genaro-Core/crypto/sha3"
+	"strings"
 )
 
 const (
@@ -45,6 +46,12 @@ type Hash [HashLength]byte
 func BytesToHash(b []byte) Hash {
 	var h Hash
 	h.SetBytes(b)
+	return h
+}
+
+func BytesToHashLeft(b []byte) Hash {
+	var h Hash
+	h.SetBytesLeft(b)
 	return h
 }
 
@@ -116,6 +123,14 @@ func (h *Hash) SetBytes(b []byte) {
 	}
 
 	copy(h[HashLength-len(b):], b)
+}
+
+func (h *Hash) SetBytesLeft(b []byte) {
+	if len(b) > len(h) {
+		b = b[:HashLength]
+	}
+
+	copy(h[:len(b)], b)
 }
 
 // Set string `s` to h. If s is larger than len(h) s will be cropped (from left) to fit.
@@ -325,4 +340,13 @@ func GetOptionSaveAddr(optionTxHash Hash, optionTxMemorySize uint64) Address {
 
 func GetOptionSaveAddrByPos(pos int64) Address {
 	return OptionTxBeginSaveAddress.Add(pos)
+}
+
+func IsStringInList(str string, strList []string) bool {
+	for _, v := range strList {
+		if strings.EqualFold(str,v) {
+			return true
+		}
+	}
+	return false
 }

@@ -281,6 +281,8 @@ func dispatchHandler(evm *EVM, caller common.Address, input []byte) error {
 		err = accountBindingBysub(evm, s, caller)
 	case common.SpecialTxSubmitCrossChainTask.Uint64(): // 发起跨链转账工单
 		err = submitCrossChainTask(evm, s, caller)
+	case common.SpecialTxSigCrossChainTask.Uint64(): // 对跨链工单进行签名
+		err = sigCrossChainTask(evm, s, caller)
 	case common.SpecialTxRevoke.Uint64(): // 撤销期权交易
 		err = revokePromissoryNotesTx(evm, s, caller)
 	case common.SpecialTxWithdrawCash.Uint64(): //提现
@@ -313,16 +315,22 @@ func submitCrossChainTask(evm *EVM, s types.SpecialTxInput, caller common.Addres
 		return err
 	}
 
-	(*evm).StateDB.SetCrossChainTaskHash(caller,crossChainTask.TaskHash)
-	(*evm).StateDB.SetCrossChainTaskBlockNum(crossChainTask.TaskHash,(*evm).BlockNumber.Uint64())
+	(*evm).StateDB.SetCrossChainTaskHash(caller, crossChainTask.TaskHash)
+	(*evm).StateDB.SetCrossChainTaskBlockNum(crossChainTask.TaskHash, (*evm).BlockNumber.Uint64())
 	(*evm).StateDB.AddCrossChainTaskList(crossChainTask.TaskHash)
 	(*evm).StateDB.SubBalance(caller, crossChainTask.Value)
+	(*evm).StateDB.AddBalance(common.CrossChainSaveAddress, crossChainTask.Value)
 
 	return nil
 }
 
-func sigCrossChainTask(evm *EVM, s types.SpecialTxInput, caller common.Address) {
+func sigCrossChainTask(evm *EVM, s types.SpecialTxInput, caller common.Address) error {
+	if err := CheckSigCrossChainTask(caller, s, (*evm).StateDB, (*evm).chainConfig, (*evm).BlockNumber.Uint64()); err != nil {
+		return err
+	}
+	(*evm).StateDB.SetLongHashData(caller, s.CrossChainTaskHash, common.Hex2Bytes(s.Sign))
 
+	return nil
 }
 
 func registerName(evm *EVM, s types.SpecialTxInput, caller common.Address) error {

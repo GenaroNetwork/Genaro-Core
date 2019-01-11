@@ -1733,6 +1733,62 @@ func (self *StateDB) GetCrossChainTaskBlockNum(hash common.Hash) uint64 {
 	return blockNumHash.Uint64()
 }
 
-func (self *StateDB) CrossChainSig() {
+// 存储长数据(hash 类数据)
+func (self *StateDB) SetLongHashData(address common.Address, hash common.Hash, data []byte) bool {
+	dataStr := string(data)
+	b := new(bytes.Buffer)
+	err := rlp.Encode(b, dataStr)
+	if err != nil {
+		return false
+	}
 
+	dataList := make([][]byte, 1)
+	for {
+		if len(data) > 32 {
+			d := data[:32]
+			data = data[32:]
+			h := self.GetState(address, common.BytesToHashLeft(d))
+			if !common.EmptyHash(h) {
+				return false
+			}
+			dataList = append(dataList, d)
+		} else {
+			dataList = append(dataList, data)
+			break
+		}
+	}
+
+	saveHash := hash
+	for _, d := range dataList {
+		self.SetState(address, saveHash, common.BytesToHashLeft(d))
+		saveHash = common.BytesToHashLeft(d)
+	}
+	return true
 }
+
+// 获取长数据(hash 类数据)
+func (self *StateDB) GetLongHashData(address common.Address, hash common.Hash) ([]byte, error) {
+	dataList := make([][]byte, 1)
+
+	saveHash := hash
+	for {
+		saveHash := self.GetState(address, saveHash)
+		if common.EmptyHash(saveHash) {
+			break
+		} else {
+			dataList = append(dataList, saveHash.Bytes())
+		}
+	}
+
+	var buffer bytes.Buffer
+	for _, b := range dataList {
+		buffer.Write(b)
+	}
+	var dataStr string
+	err := rlp.Decode(bytes.NewReader(buffer.Bytes()), &dataStr)
+	if err != nil {
+		return nil, err
+	}
+	return []byte(dataStr), nil
+}
+

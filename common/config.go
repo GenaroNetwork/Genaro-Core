@@ -170,6 +170,9 @@ var (
 	// 发起转账工单
 	SpecialTxSubmitCrossChainTask = big.NewInt(27)
 
+	// 签名转账工单
+	SpecialTxSigCrossChainTask = big.NewInt(28)
+
 	/************期权交易类型**************/
 	//提现
 	SpecialTxWithdrawCash = big.NewInt(30)

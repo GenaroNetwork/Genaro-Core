@@ -698,6 +698,8 @@ func (pool *TxPool) dispatchHandlerValidateTx(input []byte, caller common.Addres
 		nonce := pool.currentState.GetNonce(caller)
 		crossChainTask := types.BuildChainTask(s.CrossChain.SourceChainID, s.CrossChain.TargetChainID, s.CrossChain.Account, s.CrossChain.Value.ToInt(), nonce)
 		return vm.CheckSubmitCrossChainTaskTxStatus(caller, crossChainTask, pool.currentState, pool.chainconfig)
+	case common.SpecialTxSigCrossChainTask.Uint64():
+		return vm.CheckSigCrossChainTask(caller, s, pool.currentState, pool.chainconfig, pool.chain.CurrentBlock().NumberU64())
 	case common.SpecialTxPublishOption.Uint64():
 		//发布期权售卖交易
 		return vm.CheckPublishOption(caller, s, pool.currentState, pool.chain.CurrentBlock().Number())
