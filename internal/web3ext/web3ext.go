@@ -588,7 +588,13 @@ web3._extend({
 			call: 'eth_getOptionTx',
 			params: 1,
 			inputFormatter: [web3._extend.formatters.inputAddressFormatter]
-		})
+		}),
+		new web3._extend.Method({
+			name: 'getWhiteListStatus',
+			call: 'eth_getWhiteListStatus',
+			params: 1,
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter]
+		}),
 	],
 	properties: [
 		new web3._extend.Property({
