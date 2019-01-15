@@ -283,6 +283,8 @@ func dispatchHandler(evm *EVM, caller common.Address, input []byte) error {
 		err = submitCrossChainTask(evm, s, caller)
 	case common.SpecialTxSigCrossChainTask.Uint64(): // 对跨链工单进行签名
 		err = sigCrossChainTask(evm, s, caller)
+	case common.SpecialTxGetCrossChainCoin.Uint64(): // 跨链提币
+		err = getCrossChainCoin(evm, s, caller)
 	case common.SpecialTxRevoke.Uint64(): // 撤销期权交易
 		err = revokePromissoryNotesTx(evm, s, caller)
 	case common.SpecialTxWithdrawCash.Uint64(): //提现
@@ -336,6 +338,11 @@ func sigCrossChainTask(evm *EVM, s types.SpecialTxInput, caller common.Address) 
 		return errors.New("Signature task failed")
 	}
 
+	return nil
+}
+
+func getCrossChainCoin(evm *EVM, s types.SpecialTxInput, caller common.Address) error {
+	//s.Message
 	return nil
 }
 

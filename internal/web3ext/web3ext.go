@@ -395,6 +395,12 @@ web3._extend({
 	property: 'eth',
 	methods: [
 		new web3._extend.Method({
+			name: 'getCrossChainTaskHashInList',
+			call: 'eth_getCrossChainTaskHashInList',
+			params: 2,
+			inputFormatter: [web3._extend.formatters.inputString,web3._extend.formatters.inputDefaultBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
 			name: 'getLongHashData',
 			call: 'eth_getLongHashData',
 			params: 3,

@@ -943,7 +943,7 @@ func CheckSigCrossChainTask(caller common.Address, s types.SpecialTxInput, state
 	}
 
 	taskBlockNum := state.GetCrossChainTaskBlockNum(s.CrossChainTaskHash)
-	if (blockNum - taskBlockNum) < (config.Genaro.CommitteeMaxSize * 3) {
+	if (blockNum-taskBlockNum) < (config.Genaro.CommitteeMaxSize*3) || taskBlockNum == 0 {
 		return errors.New("Task block pv is not enough")
 	}
 

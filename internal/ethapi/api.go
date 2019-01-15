@@ -228,6 +228,29 @@ func (s *PublicBlockChainAPI) GetMainAccountRank(ctx context.Context, blockNr rp
 	return committees
 }
 
+// 获取跨链任务hash值
+func (s *PublicBlockChainAPI) GetCrossChainTaskHashInList(ctx context.Context, hashStr string, blockNr rpc.BlockNumber) *common.Hash {
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
+	if state == nil || err != nil {
+		log.Error("State read error")
+		return nil
+	}
+	if strings.EqualFold("head", hashStr) {
+		hash := state.GetCrossChainTaskListHead()
+		return &hash
+	} else if strings.EqualFold("ptr", hashStr) {
+		hash := state.GetCrossChainTaskListPtr()
+		return &hash
+	} else if strings.EqualFold("end", hashStr) {
+		hash := state.GetCrossChainTaskListEnd()
+		return &hash
+	} else {
+		hash := common.StringToHash(hashStr)
+		hash = state.GetCrossChainTaskListNext(hash)
+		return &hash
+	}
+}
+
 // 获取跨链工单信息
 func (s *PublicBlockChainAPI) GetCrossChainTask(ctx context.Context, hashStr string, blockNr rpc.BlockNumber) *types.CrossChainTask {
 	hash := common.HexToHash(hashStr)

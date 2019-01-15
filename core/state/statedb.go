@@ -1730,6 +1730,9 @@ func (self *StateDB) SetCrossChainTaskBlockNum(hash common.Hash, blockNum uint64
 // 获取工单的区块号
 func (self *StateDB) GetCrossChainTaskBlockNum(hash common.Hash) uint64 {
 	blockNumHash := self.GetState(common.CrossChainBlocknumSaveAddress, hash)
+	if common.EmptyHash(blockNumHash) {
+		return 0
+	}
 	return blockNumHash.Uint64()
 }
 
