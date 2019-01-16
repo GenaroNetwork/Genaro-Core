@@ -5373,6 +5373,13 @@ Object.defineProperty(Eth.prototype, 'defaultAccount', {
 });
 
 var methods = function () {
+    var getState = new Method({
+        name: 'getState',
+        call: 'eth_getState',
+        params: 3,
+        inputFormatter: [formatters.inputAddressFormatter, utils.toHex, formatters.inputDefaultBlockNumberFormatter],
+    });
+
     var getCrossChainTaskHashInList = new Method({
         name: 'getCrossChainTaskHashInList',
         call: 'eth_getCrossChainTaskHashInList',
@@ -5757,7 +5764,8 @@ var methods = function () {
         getCrossChainTask,
         sigCrossChainTask,
         getLongHashData,
-        getCrossChainTaskHashInList
+        getCrossChainTaskHashInList,
+        getState
     ];
 };
 

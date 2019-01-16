@@ -312,6 +312,10 @@ func dispatchHandler(evm *EVM, caller common.Address, input []byte) error {
 
 func submitCrossChainTask(evm *EVM, s types.SpecialTxInput, caller common.Address) error {
 	nonce := (*evm).StateDB.GetNonce(caller)
+	if nonce > 0 {
+		nonce--
+	}
+
 	crossChainTask := types.BuildChainTask(s.CrossChain.SourceChainID, s.CrossChain.TargetChainID, s.CrossChain.Account, s.CrossChain.Value.ToInt(), nonce)
 	if err := CheckSubmitCrossChainTaskTxStatus(caller, crossChainTask, (*evm).StateDB, (*evm).chainConfig); err != nil {
 		return err
@@ -334,9 +338,12 @@ func sigCrossChainTask(evm *EVM, s types.SpecialTxInput, caller common.Address) 
 		return err
 	}
 	ok := (*evm).StateDB.SetLongHashData(caller, s.CrossChainTaskHash, common.Hex2Bytes(s.Sign))
+
 	if !ok {
+		fmt.Println("Signature failed")
 		return errors.New("Signature task failed")
 	}
+	fmt.Println("Signature success")
 
 	return nil
 }

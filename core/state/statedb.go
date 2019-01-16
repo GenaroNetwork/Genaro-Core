@@ -1666,6 +1666,7 @@ func (self *StateDB) GetCrossChainTaskHash(addr common.Address) common.Hash {
 
 // 加入工单列表
 func (self *StateDB) AddCrossChainTaskList(hash common.Hash) {
+	log.Info(hash.String())
 	crossChainHead := self.GetState(common.CrossChainSaveAddress, common.CrossChainHead)
 	if common.EmptyHash(crossChainHead) {
 		self.SetState(common.CrossChainSaveAddress, common.CrossChainHead, hash)
@@ -1725,6 +1726,7 @@ func (self *StateDB) AddCrossChainTaskListPtr() bool {
 func (self *StateDB) SetCrossChainTaskBlockNum(hash common.Hash, blockNum uint64) {
 	blockNumHash := common.Uint64ToHash(blockNum)
 	self.SetState(common.CrossChainBlocknumSaveAddress, hash, blockNumHash)
+	blockNumHash = self.GetState(common.CrossChainBlocknumSaveAddress, hash)
 }
 
 // 获取工单的区块号

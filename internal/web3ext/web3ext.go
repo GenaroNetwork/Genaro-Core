@@ -395,6 +395,12 @@ web3._extend({
 	property: 'eth',
 	methods: [
 		new web3._extend.Method({
+			name: 'getState',
+			call: 'eth_getState',
+			params: 3,
+			inputFormatter: [web3._extend.formatters.inputAddressFormatter,web3._extend.utils.toHex,web3._extend.formatters.inputDefaultBlockNumberFormatter]
+		}),
+		new web3._extend.Method({
 			name: 'getCrossChainTaskHashInList',
 			call: 'eth_getCrossChainTaskHashInList',
 			params: 2,

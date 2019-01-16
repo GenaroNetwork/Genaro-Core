@@ -98,7 +98,7 @@ type stateObject struct {
 
 // empty returns whether the account is considered empty.
 func (s *stateObject) empty() bool {
-	return s.data.Nonce == 0 && s.data.Balance.Sign() == 0 && bytes.Equal(s.data.CodeHash, emptyCodeHash)
+	return s.data.Nonce == 0 && s.data.Balance.Sign() == 0 && bytes.Equal(s.data.CodeHash, emptyCodeHash) && s.data.Root == emptyState
 }
 
 // Account is the Ethereum consensus representation of accounts.
@@ -2059,7 +2059,7 @@ func (self *stateObject) DeletePromissoryNotes(orderId common.Hash, address comm
 		return types.PromissoryNotesOptionTx{}
 	}
 	delete(optionTxTable, orderId)
-	fmt.Println(optionTxTable)
+
 	b, _ := json.Marshal(optionTxTable)
 	self.code = nil
 	self.data.CodeHash = b[:]
