@@ -345,6 +345,16 @@ func (s *PublicBlockChainAPI) GetLongHashData(ctx context.Context, address commo
 	return common.Bytes2Hex(data), nil
 }
 
+// 获取跨链证明
+func (s *PublicBlockChainAPI) GetCrossChainProve(ctx context.Context, hashStr string, blockNr rpc.BlockNumber) (prove string) {
+	crossChainTask := s.GetCrossChainTask(ctx, hashStr, blockNr)
+	if crossChainTask != nil {
+		b, _ := json.Marshal(crossChainTask)
+		prove = hexutil.Encode(b)
+	}
+	return prove
+}
+
 // PrivateAccountAPI provides an API to access accounts managed by this node.
 // It offers methods to create, (un)lock en list accounts. Some methods accept
 // passwords and are therefore considered private by default.

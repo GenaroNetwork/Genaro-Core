@@ -3,6 +3,7 @@ package vm
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/GenaroNetwork/Genaro-Core/common"
@@ -945,6 +946,64 @@ func CheckSigCrossChainTask(caller common.Address, s types.SpecialTxInput, state
 	taskBlockNum := state.GetCrossChainTaskBlockNum(s.CrossChainTaskHash)
 	if (blockNum-taskBlockNum) < (config.Genaro.CommitteeMaxSize*3) || taskBlockNum == 0 {
 		return errors.New("Task block pv is not enough")
+	}
+
+	signStr := s.Sign
+	if !strings.HasPrefix(signStr, "0x") {
+		signStr = "0x" + signStr
+	}
+	sign, err := hexutil.Decode(signStr)
+	if err != nil {
+		return err
+	}
+
+	recoveredPub, err := crypto.SigToPub(s.CrossChainTaskHash.Bytes(), sign)
+	if err != nil {
+		return err
+	}
+	recoveredAddr := crypto.PubkeyToAddress(*recoveredPub)
+	if caller != recoveredAddr {
+		return errors.New("Address mismatch")
+	}
+
+	return nil
+}
+
+func CheckGetCrossChainCoin(caller common.Address, s types.SpecialTxInput, state StateDB, config *params.ChainConfig, blockNum uint64) error {
+	b, err := hexutil.Decode(s.Sign)
+	if err != nil {
+		return err
+	}
+
+	var crossChainTask types.CrossChainTask
+	err = json.Unmarshal(b, &crossChainTask)
+	if err != nil {
+		return err
+	}
+
+	if !crossChainTask.CheckHash() {
+		return errors.New("Task hash error")
+	}
+
+	// 认证签名
+	minWitnesses := len(config.Genaro.SigAddresses)*2/3 + 1
+	if len(crossChainTask.Witnesses) < minWitnesses {
+		return errors.New("There is not enough witnesses")
+	}
+	for witness, sign := range crossChainTask.Witnesses {
+		ok, err := crossChainTask.CheckSign(witness, sign)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return errors.New("Signature check failed")
+		}
+	}
+
+	// 是否已生效
+	taskBlockNum := state.GetCrossChainGetCoinTaskBlockNum(crossChainTask.TaskHash)
+	if taskBlockNum != 0 {
+		return errors.New("Task prove exist")
 	}
 
 	return nil

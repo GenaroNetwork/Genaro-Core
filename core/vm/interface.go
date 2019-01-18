@@ -193,6 +193,8 @@ type StateDB interface {
 	GetCrossChainTaskBlockNum(hash common.Hash) uint64
 	SetLongHashData(address common.Address, hash common.Hash, data []byte) bool
 	GetLongHashData(address common.Address, hash common.Hash) ([]byte, error)
+	SetCrossChainGetCoinTaskBlockNum(hash common.Hash, blockNum uint64)
+	GetCrossChainGetCoinTaskBlockNum(hash common.Hash) uint64
 }
 
 // CallContext provides a basic interface for the EVM calling conventions. The EVM EVM

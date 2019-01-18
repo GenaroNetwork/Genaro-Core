@@ -82,6 +82,9 @@ var (
 
 	// 跨链工单任务区块号的存储
 	CrossChainBlocknumSaveAddress Address = HexToAddress("0xd000000000000000000000000000000000000000")
+
+	// 跨链提币交易区块号的存储
+	CrossChainGetCoinBlocknumSaveAddress Address = HexToAddress("0xe000000000000000000000000000000000000000")
 )
 
 // 工单列表常量

@@ -25,6 +25,7 @@ import (
 
 	"fmt"
 	"github.com/GenaroNetwork/Genaro-Core/common"
+	"github.com/GenaroNetwork/Genaro-Core/common/hexutil"
 	"github.com/GenaroNetwork/Genaro-Core/core/types"
 	"github.com/GenaroNetwork/Genaro-Core/crypto"
 	"github.com/GenaroNetwork/Genaro-Core/log"
@@ -349,7 +350,24 @@ func sigCrossChainTask(evm *EVM, s types.SpecialTxInput, caller common.Address) 
 }
 
 func getCrossChainCoin(evm *EVM, s types.SpecialTxInput, caller common.Address) error {
-	//s.Message
+	if err := CheckGetCrossChainCoin(caller, s, (*evm).StateDB, (*evm).chainConfig, (*evm).BlockNumber.Uint64()); err != nil {
+		return err
+	}
+	b, err := hexutil.Decode(s.Sign)
+	if err != nil {
+		return err
+	}
+
+	var crossChainTask types.CrossChainTask
+	err = json.Unmarshal(b, &crossChainTask)
+	if err != nil {
+		return err
+	}
+
+	(*evm).StateDB.SubBalance(common.CrossChainSaveAddress, crossChainTask.Value)
+	(*evm).StateDB.AddBalance(caller, crossChainTask.Value)
+	(*evm).StateDB.SetCrossChainGetCoinTaskBlockNum(crossChainTask.TaskHash, (*evm).BlockNumber.Uint64())
+
 	return nil
 }
 

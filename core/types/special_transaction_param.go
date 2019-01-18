@@ -586,13 +586,13 @@ func (name *AccountName) GetBigPrice() *big.Int {
 
 // 跨链工单
 type CrossChainTask struct {
-	TaskHash      common.Hash
-	SourceChainID uint64
-	TargetChainID uint64
-	Account       common.Address
-	Value         *big.Int
-	Nonce         uint64
-	Witnesses     map[common.Address][]byte
+	TaskHash      common.Hash               `json:"TaskHash"`
+	SourceChainID uint64                    `json:"SourceChainID"`
+	TargetChainID uint64                    `json:"TargetChainID"`
+	Account       common.Address            `json:"Account"`
+	Value         *big.Int                  `json:"Value"`
+	Nonce         uint64                    `json:"Nonce"`
+	Witnesses     map[common.Address][]byte `json:"Witnesses"`
 }
 
 func (t *CrossChainTask) GenHash() {
@@ -605,6 +605,20 @@ func (t *CrossChainTask) GenHash() {
 		t.Nonce,
 	})
 	hasher.Sum(t.TaskHash[:0])
+}
+
+func (t *CrossChainTask) CheckHash() bool {
+	var hash common.Hash
+	hasher := sha3.NewKeccak256()
+	rlp.Encode(hasher, []interface{}{
+		t.SourceChainID,
+		t.TargetChainID,
+		t.Account,
+		t.Value.String(),
+		t.Nonce,
+	})
+	hasher.Sum(hash[:0])
+	return t.TaskHash == hash
 }
 
 //type SignerFn func(accounts.Account, []byte) ([]byte, error)

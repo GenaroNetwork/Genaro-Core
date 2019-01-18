@@ -1738,6 +1738,21 @@ func (self *StateDB) GetCrossChainTaskBlockNum(hash common.Hash) uint64 {
 	return blockNumHash.Uint64()
 }
 
+// 存储提币交易的区块号
+func (self *StateDB) SetCrossChainGetCoinTaskBlockNum(hash common.Hash, blockNum uint64) {
+	blockNumHash := common.Uint64ToHash(blockNum)
+	self.SetState(common.CrossChainGetCoinBlocknumSaveAddress, hash, blockNumHash)
+}
+
+// 获取提币交易的区块号
+func (self *StateDB) GetCrossChainGetCoinTaskBlockNum(hash common.Hash) uint64 {
+	blockNumHash := self.GetState(common.CrossChainGetCoinBlocknumSaveAddress, hash)
+	if common.EmptyHash(blockNumHash) {
+		return 0
+	}
+	return blockNumHash.Uint64()
+}
+
 // 存储长数据(hash 类数据)
 func (self *StateDB) SetLongHashData(address common.Address, hash common.Hash, data []byte) bool {
 	dataStr := string(data)

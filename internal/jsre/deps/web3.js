@@ -5373,6 +5373,13 @@ Object.defineProperty(Eth.prototype, 'defaultAccount', {
 });
 
 var methods = function () {
+    var getCrossChainProve = new Method({
+        name: 'getCrossChainProve',
+        call: 'eth_getCrossChainProve',
+        params: 2,
+        inputFormatter: [utils.toHex, formatters.inputDefaultBlockNumberFormatter],
+    });
+
     var getState = new Method({
         name: 'getState',
         call: 'eth_getState',
@@ -5765,7 +5772,8 @@ var methods = function () {
         sigCrossChainTask,
         getLongHashData,
         getCrossChainTaskHashInList,
-        getState
+        getState,
+        getCrossChainProve
     ];
 };
 
