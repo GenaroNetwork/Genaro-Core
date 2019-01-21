@@ -969,7 +969,7 @@ func CheckSigCrossChainTask(caller common.Address, s types.SpecialTxInput, state
 	return nil
 }
 
-func CheckGetCrossChainCoin(caller common.Address, s types.SpecialTxInput, state StateDB, config *params.ChainConfig, blockNum uint64) error {
+func CheckGetCrossChainCoin(caller common.Address, s types.SpecialTxInput, state StateDB, config *params.ChainConfig) error {
 	b, err := hexutil.Decode(s.Sign)
 	if err != nil {
 		return err
@@ -979,6 +979,10 @@ func CheckGetCrossChainCoin(caller common.Address, s types.SpecialTxInput, state
 	err = json.Unmarshal(b, &crossChainTask)
 	if err != nil {
 		return err
+	}
+
+	if crossChainTask.Account != caller {
+		return errors.New("Caller mismatch")
 	}
 
 	if !crossChainTask.CheckHash() {

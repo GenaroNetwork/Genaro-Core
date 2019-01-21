@@ -350,7 +350,7 @@ func sigCrossChainTask(evm *EVM, s types.SpecialTxInput, caller common.Address) 
 }
 
 func getCrossChainCoin(evm *EVM, s types.SpecialTxInput, caller common.Address) error {
-	if err := CheckGetCrossChainCoin(caller, s, (*evm).StateDB, (*evm).chainConfig, (*evm).BlockNumber.Uint64()); err != nil {
+	if err := CheckGetCrossChainCoin(caller, s, (*evm).StateDB, (*evm).chainConfig); err != nil {
 		return err
 	}
 	b, err := hexutil.Decode(s.Sign)

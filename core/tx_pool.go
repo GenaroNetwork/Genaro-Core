@@ -700,6 +700,8 @@ func (pool *TxPool) dispatchHandlerValidateTx(input []byte, caller common.Addres
 		return vm.CheckSubmitCrossChainTaskTxStatus(caller, crossChainTask, pool.currentState, pool.chainconfig)
 	case common.SpecialTxSigCrossChainTask.Uint64():
 		return vm.CheckSigCrossChainTask(caller, s, pool.currentState, pool.chainconfig, pool.chain.CurrentBlock().NumberU64())
+	case common.SpecialTxGetCrossChainCoin.Uint64():
+		return vm.CheckGetCrossChainCoin(caller, s, pool.currentState, pool.chainconfig)
 	case common.SpecialTxPublishOption.Uint64():
 		//发布期权售卖交易
 		return vm.CheckPublishOption(caller, s, pool.currentState, pool.chain.CurrentBlock().Number())
