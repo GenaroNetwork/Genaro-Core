@@ -914,6 +914,11 @@ func CheckUnsubscribeNameTxStatus(caller common.Address, s types.SpecialTxInput,
 
 // 检测跨链交易的参数是否正确
 func CheckSubmitCrossChainTaskTxStatus(caller common.Address, crossChainTask *types.CrossChainTask, state StateDB, config *params.ChainConfig) error {
+	// 检测是否满足最小跨链额度
+	if crossChainTask.Value.Cmp(common.MinCrossChainValue) < 0 {
+		return errors.New("Crosschain value is too low")
+	}
+
 	if crossChainTask.SourceChainID != config.ChainId.Uint64() {
 		return errors.New("Chain ID mismatch")
 	}

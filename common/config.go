@@ -15,6 +15,8 @@ func init() {
 
 	DefaultOneDaySyncLogGsaCost, _ = math.ParseBig256("1000000000000000000")
 	DefaultOneDayMortgageGes, _ = math.ParseBig256("1000000000000000000")
+
+	MinCrossChainValue, _ = math.ParseBig256("5000000000000000000") // 跨链最少5个gnx
 }
 
 //费用
@@ -30,6 +32,8 @@ var (
 	DefaultStakeValuePerNode *big.Int
 
 	DefaultOneDayMortgageGes *big.Int
+
+	MinCrossChainValue *big.Int
 )
 
 /*

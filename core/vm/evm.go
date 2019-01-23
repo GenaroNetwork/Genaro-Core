@@ -339,7 +339,6 @@ func sigCrossChainTask(evm *EVM, s types.SpecialTxInput, caller common.Address) 
 		return err
 	}
 	ok := (*evm).StateDB.SetLongHashData(caller, s.CrossChainTaskHash, common.Hex2Bytes(s.Sign))
-
 	if !ok {
 		fmt.Println("Signature failed")
 		return errors.New("Signature task failed")
