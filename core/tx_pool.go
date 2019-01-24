@@ -648,10 +648,10 @@ func (pool *TxPool) dispatchHandlerValidateTx(input []byte, caller common.Addres
 		return vm.CheckApplyBucketTx(s, pool.currentState, pool.chainconfig.Genaro)
 	case common.SpecialTxBucketSupplement.Uint64(): // 存储空间续命
 		return vm.CheckBucketSupplement(s, pool.currentState, pool.chainconfig.Genaro)
-	case common.SpecialTxTypeMortgageInit.Uint64(): // 交易代表用户押注初始化交易
-		return vm.CheckspecialTxTypeMortgageInitParameter(s, s.SpecialTxTypeMortgageInit.FromAccount)
-	case common.SpecialTxTypeSyncSidechainStatus.Uint64(): //同步日志+结算
-		return vm.CheckSpecialTxTypeSyncSidechainStatusParameter(s, caller, pool.currentState, pool.chainconfig.Genaro)
+	//case common.SpecialTxTypeMortgageInit.Uint64(): // 交易代表用户押注初始化交易
+	//	return vm.CheckspecialTxTypeMortgageInitParameter(s, s.SpecialTxTypeMortgageInit.FromAccount)
+	//case common.SpecialTxTypeSyncSidechainStatus.Uint64(): //同步日志+结算
+	//	return vm.CheckSpecialTxTypeSyncSidechainStatusParameter(s, caller, pool.currentState, pool.chainconfig.Genaro)
 	case common.SpecialTxTypeTrafficApply.Uint64(): //用户申购流量
 		return vm.CheckTrafficTx(s, pool.currentState, pool.chainconfig.Genaro)
 	case common.SpecialTxTypeSyncNode.Uint64(): //用户stake后同步节点Id
