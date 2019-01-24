@@ -235,10 +235,10 @@ func dispatchHandler(evm *EVM, caller common.Address, input []byte) error {
 		err = updateStorageProperties(evm, s, caller)
 	case common.SpecialTxBucketSupplement.Uint64(): // 存储空间续命
 		err = bucketSupplement(evm, s, caller)
-	case common.SpecialTxTypeMortgageInit.Uint64(): // 交易代表用户押注初始化交易
-		err = specialTxTypeMortgageInit(evm, s, caller)
-	case common.SpecialTxTypeSyncSidechainStatus.Uint64(): //同步日志+结算
-		err = SpecialTxTypeSyncSidechainStatus(evm, s, caller)
+	//case common.SpecialTxTypeMortgageInit.Uint64(): // 交易代表用户押注初始化交易
+	//	err = specialTxTypeMortgageInit(evm, s, caller)
+	//case common.SpecialTxTypeSyncSidechainStatus.Uint64(): //同步日志+结算
+	//	err = SpecialTxTypeSyncSidechainStatus(evm, s, caller)
 	case common.SpecialTxTypeTrafficApply.Uint64(): //用户申购流量
 		err = updateTraffic(evm, s, caller)
 	case common.SpecialTxTypeSyncNode.Uint64(): //用户stake后同步节点Id

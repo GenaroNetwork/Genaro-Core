@@ -133,24 +133,24 @@ func main() {
 	go sigDeal(lock)
 
 	for {
-		ok := utils.TryLock(lock, 10)
-		if !ok {
-			continue
-		}
-
 	LOOP:
 		for {
+			ok := utils.TryLock(lock, 10)
+			if !ok {
+				continue
+			}
 			var idx int
-			ok := SynState(client)
+			ok = SynState(client)
 			if !ok {
 				idx++
 			}
 			time.Sleep(time.Duration(delaytime) * time.Second)
-			if idx > 100 {
+			if idx > 30 {
 				break LOOP
 			}
 		}
 		lock.Unlock()
+		time.Sleep(3 * time.Duration(delaytime) * time.Second)
 	}
 
 }
