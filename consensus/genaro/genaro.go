@@ -693,7 +693,8 @@ func (g *Genaro) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	// 按账户设定收益权重
 	//proportion := snap.Committee[header.Coinbase]
 	// 按照顺位设定收益权重
-	proportion := snap.Committee[snap.CommitteeRank[blockNumber%snap.CommitteeSize]]
+	//proportion := snap.Committee[snap.CommitteeRank[blockNumber%snap.CommitteeSize]]
+	proportion := snap.Committee[snap.CommitteeRank[(blockNumber/g.config.BlockInterval)%snap.CommitteeSize]]
 
 	//  coin interest reward
 	accumulateInterestRewards(g.config, state, header, proportion, blockNumber, snap.CommitteeSize, snap.CommitteeAccountBinding)
