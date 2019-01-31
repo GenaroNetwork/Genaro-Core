@@ -272,7 +272,7 @@ func main() {
 			OptionTxMemorySize:  20,                  //the number of save option tx
 			PromissoryNotePrice: PromissoryNotePrice, // Promissory Note Price
 			OfficialAddress:     OfficialAddress,
-			PropBlock:           big.NewInt(100),
+			PropBlock:           big.NewInt(int64(common.PropBlock)),
 		},
 	}
 	genesis := new(core.Genesis)
