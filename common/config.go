@@ -194,6 +194,9 @@ var SynBlockLen = uint64(6)
 var BackStakePeriod = uint64(5)
 var Base = uint64(100000) // 收益计算中间值
 
+// PropBlock 默认分叉块
+var PropBlock = uint64(100)
+
 // 可变更的全局变量
 var (
 	MaxBinding          = uint64(10)   // 一个主节点最大的绑定数量
