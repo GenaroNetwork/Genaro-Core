@@ -182,6 +182,7 @@ type GenaroConfig struct {
 	PromissoryNotePrice uint64   `json:"PromissoryNotePrice"` // Promissory Note Price
 	OfficialAddress     string   `json:"OfficialAddress"`
 	PropBlock           *big.Int `json:"PropBlock,omitempty"` // Prop HF block
+	TurnBlock           *big.Int `json:"TurnBlock,omitempty"` // Turn HF block
 }
 
 // String implements the stringer interface, returning the consensus engine details.
@@ -248,6 +249,10 @@ func (c *ChainConfig) IsConstantinople(num *big.Int) bool {
 
 func (g *GenaroConfig) IsProp(num *big.Int) bool {
 	return isForked(g.PropBlock, num)
+}
+
+func (g *GenaroConfig) IsTurn(num *big.Int) bool {
+	return isForked(g.TurnBlock, num)
 }
 
 // GasTable returns the gas table corresponding to the current phase (homestead or homestead reprice).

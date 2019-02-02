@@ -143,7 +143,7 @@ func GetTurnOfCommiteeByBlockNumber(config *params.GenaroConfig, number uint64) 
 
 //  get the depend turn from block number
 func GetDependTurnByBlockNumber(config *params.GenaroConfig, number uint64) uint64 {
-	return GetTurnOfCommiteeByBlockNumber(config, number)
+	return GetTurnOfCommiteeByBlockNumber(config, number) - config.ValidPeriod
 }
 
 //  get the  written BlockNumber by the turn of committee

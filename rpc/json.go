@@ -226,7 +226,7 @@ func parseBatchRequest(incomingMsg json.RawMessage) ([]rpcRequest, bool, Error) 
 		return nil, false, &invalidMessageError{err.Error()}
 	}
 
-	for i,_ := range in {
+	for i, _ := range in {
 		in[i].Method = strings.Replace(in[i].Method, "gnx", "eth", 1)
 	}
 

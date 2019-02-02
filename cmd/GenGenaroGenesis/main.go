@@ -273,6 +273,7 @@ func main() {
 			PromissoryNotePrice: PromissoryNotePrice, // Promissory Note Price
 			OfficialAddress:     OfficialAddress,
 			PropBlock:           big.NewInt(int64(common.PropBlock)),
+			TurnBlock:           big.NewInt(int64(common.PropBlock)),
 		},
 	}
 	genesis := new(core.Genesis)
