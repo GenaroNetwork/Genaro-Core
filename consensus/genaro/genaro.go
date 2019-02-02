@@ -686,15 +686,16 @@ func (g *Genaro) Finalize(chain consensus.ChainReader, header *types.Header, sta
 		state.AddLastRootState(header.ParentHash, header.Number.Uint64()-1)
 	}
 
+	// 出块委员会的快照获取
 	var snap *CommitteeSnapshot
 	var err error
-	if g.config.TurnBlock == nil && blockNumber >= common.TurnBlock {
-		snap, err = g.snapshot(chain, GetDependTurnByBlockNumber(g.config, header.Number.Uint64()), nil)
-	} else if g.config.IsTurn(header.Number) {
-		snap, err = g.snapshot(chain, GetDependTurnByBlockNumber(g.config, header.Number.Uint64()), nil)
-	} else {
-		snap, err = g.snapshot(chain, GetTurnOfCommiteeByBlockNumber(g.config, header.Number.Uint64()), nil)
-	}
+	//if g.config.TurnBlock == nil && blockNumber >= common.TurnBlock {
+	//	snap, err = g.snapshot(chain, GetDependTurnByBlockNumber(g.config, header.Number.Uint64()), nil)
+	//} else if g.config.IsTurn(header.Number) {
+	//	snap, err = g.snapshot(chain, GetDependTurnByBlockNumber(g.config, header.Number.Uint64()), nil)
+	//} else {
+	snap, err = g.snapshot(chain, GetTurnOfCommiteeByBlockNumber(g.config, header.Number.Uint64()), nil)
+	//}
 	if err != nil {
 		return nil, err
 	}
