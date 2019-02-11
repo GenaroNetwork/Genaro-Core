@@ -687,26 +687,24 @@ func (g *Genaro) Finalize(chain consensus.ChainReader, header *types.Header, sta
 	}
 
 	// 出块委员会的快照获取
-	var snap *CommitteeSnapshot
-	var err error
-	//if g.config.TurnBlock == nil && blockNumber >= common.TurnBlock {
-	//	snap, err = g.snapshot(chain, GetDependTurnByBlockNumber(g.config, header.Number.Uint64()), nil)
-	//} else if g.config.IsTurn(header.Number) {
-	//	snap, err = g.snapshot(chain, GetDependTurnByBlockNumber(g.config, header.Number.Uint64()), nil)
-	//} else {
-	snap, err = g.snapshot(chain, GetTurnOfCommiteeByBlockNumber(g.config, header.Number.Uint64()), nil)
-	//}
+	snap, err := g.snapshot(chain, GetTurnOfCommiteeByBlockNumber(g.config, header.Number.Uint64()), nil)
 	if err != nil {
 		return nil, err
 	}
+
 	// 按账户设定收益权重
 	//proportion := snap.Committee[header.Coinbase]
+	// 获取顺位值
+	index := uint64(0)
+	if (g.config.TurnBlock == nil && blockNumber >= common.TurnBlock) || g.config.IsTurn(header.Number) {
+		index = uint64(snap.getInturnRank(blockNumber))
+	} else {
+		index = (blockNumber / g.config.BlockInterval) % snap.CommitteeSize
+	}
 	// 按照顺位设定收益权重
 	proportion := uint64(0)
-	if g.config.PropBlock == nil && blockNumber >= common.PropBlock {
-		proportion = snap.Committee[snap.CommitteeRank[(blockNumber/g.config.BlockInterval)%snap.CommitteeSize]]
-	} else if g.config.IsProp(header.Number) {
-		proportion = snap.Committee[snap.CommitteeRank[(blockNumber/g.config.BlockInterval)%snap.CommitteeSize]]
+	if (g.config.PropBlock == nil && blockNumber >= common.PropBlock) || g.config.IsProp(header.Number) {
+		proportion = snap.Committee[snap.CommitteeRank[index]]
 	} else {
 		proportion = snap.Committee[snap.CommitteeRank[blockNumber%snap.CommitteeSize]]
 	}
