@@ -196,6 +196,7 @@ var Base = uint64(100000) // 收益计算中间值
 
 // PropBlock 默认分叉块
 var PropBlock = uint64(2150000)
+
 // TurnBlock 默认分叉块
 var TurnBlock = uint64(2735000)
 
