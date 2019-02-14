@@ -73,12 +73,12 @@ func CheckspecialTxTypeMortgageInitParameter(s types.SpecialTxInput, caller comm
 	var tmp big.Int
 	timeLimit := s.SpecialTxTypeMortgageInit.TimeLimit.ToInt()
 	tmp.Mul(timeLimit, big.NewInt(86400))
-	endTime := tmp.Add(&tmp, big.NewInt(s.SpecialTxTypeMortgageInit.CreateTime)).Int64()
+	/*endTime := tmp.Add(&tmp, big.NewInt(s.SpecialTxTypeMortgageInit.CreateTime)).Int64()
 	if s.SpecialTxTypeMortgageInit.CreateTime > s.SpecialTxTypeMortgageInit.EndTime ||
 		s.SpecialTxTypeMortgageInit.CreateTime > time.Now().Unix() ||
 		s.SpecialTxTypeMortgageInit.EndTime != endTime {
 		return errors.New("Parameter CreateTime or EndTime  error")
-	}
+	}*/
 	if caller != s.SpecialTxTypeMortgageInit.FromAccount {
 		return errors.New("Parameter FromAccount  error")
 	}
