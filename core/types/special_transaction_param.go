@@ -291,6 +291,16 @@ type GenaroData struct {
 	SynchronizeShareKeyArr       map[string]SynchronizeShareKey       `json:"synchronizeShareKeyArr"`
 	SynchronizeShareKey          SynchronizeShareKey                  `json:"synchronizeShareKey"`
 	PromissoryNotes              PromissoryNotes                      `json:"PromissoryNotes"`
+	CrossChainArr				 map[string] CrossChain								`json:"cross_chain_arr"`
+	CrossChain				     CrossChain	`json:"cross_chain"`
+}
+
+type CrossChain struct {
+	FromAddress common.Address	`json:"from_address"`
+	Address common.Address	`json:"address"`
+	Amount *hexutil.Big	`json:"amount"`
+	Hash string				`json:"hash"`
+	Type  bool				`json:"type"`
 }
 
 type SynchronizeShareKey struct {

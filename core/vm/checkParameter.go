@@ -877,3 +877,34 @@ func CheckUnsubscribeNameTxStatus(caller common.Address, s types.SpecialTxInput,
 
 	return nil
 }
+
+
+
+func CheckCrossChainParameter(s types.SpecialTxInput, state StateDB, caller common.Address) error {
+	if len(s.CrossChain.Hash) != 32 {
+		return errors.New("Hash length should be equal to 32 bits")
+	}
+	balance := state.GetBalance(caller)
+	if balance.Cmp(s.CrossChain.Amount.ToInt()) <= 0 {
+		return errors.New("Insufficient balance")
+	}
+
+	if caller != s.CrossChain.FromAddress {
+		return errors.New("From address error")
+	}
+
+	if true == state.CheckCrossChainHash(caller,s.CrossChain.Hash) {
+		return errors.New("Hash existed")
+	}
+	return nil
+}
+
+func CheckCrossChainTranactionParameter(s types.SpecialTxInput, state StateDB, caller common.Address) error {
+	if len(s.CrossChain.Hash) != 32 {
+		return errors.New("Hash length should be equal to 32 bits")
+	}
+	if 0 == len(s.CrossChain.FromAddress) {
+		return errors.New("From Address empty")
+	}
+	return nil
+}

@@ -1973,6 +1973,12 @@ func (s *PublicBlockChainAPI) GetLogSwitch(ctx context.Context, address common.A
 	return accountAttributes.SpecialTxTypeMortgageInitArr
 }
 
+
+func (s *PublicBlockChainAPI) GetCrossChain(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) map[string]types.CrossChain {
+	accountAttributes, _ := s.AccountAttributes(ctx, address, rpc.BlockNumber(-1))
+	return accountAttributes.CrossChainArr
+}
+
 func (s *PublicBlockChainAPI) GetLogSwitchByAddressAndFileID(ctx context.Context, args string) map[common.Address]map[string]bool {
 	var addressAndFileID map[common.Address][]string
 	var result map[common.Address]map[string]bool
@@ -2106,4 +2112,24 @@ func (s *PublicBlockChainAPI) GetOptionTx(ctx context.Context, address common.Ad
 	}
 
 	return optionTxTableRet
+}
+
+
+
+func (s *PublicTransactionPoolAPI) GetCrossChainByBlockNumberRange(ctx context.Context, startBlockNr rpc.BlockNumber, endBlockNr rpc.BlockNumber) ([]types.CrossChain, error) {
+	result, err := s.GetTransactionByBlockNumberRange(ctx, startBlockNr, endBlockNr, common.SpecialTxCrossChain)
+	if err != nil {
+		return nil, err
+	}
+	var crossChain types.GenaroData
+	var resultArr []types.CrossChain
+	for _, v := range result {
+		fmt.Println(string(v.Input[:]))
+		json.Unmarshal(v.Input, &crossChain)
+		transactionReceipt, err := s.GetTransactionReceipt(ctx, v.Hash)
+		if nil == err && nil != transactionReceipt {
+			resultArr = append(resultArr, crossChain.CrossChain)
+		}
+	}
+	return resultArr, nil
 }

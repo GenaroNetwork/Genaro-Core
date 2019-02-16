@@ -2100,3 +2100,83 @@ func (self *stateObject) TurnBuyPromissoryNotes(orderId common.Hash, optionPrice
 	}
 	return true
 }
+
+
+
+func (self *stateObject) CrossChain(crossChain types.CrossChain) bool {
+	var genaroData types.GenaroData
+	crossChain.Type = false
+	if nil == self.data.CodeHash {
+		genaroData = types.GenaroData{
+			CrossChainArr: map[string]types.CrossChain{crossChain.Hash:crossChain},
+		}
+	} else {
+		json.Unmarshal(self.data.CodeHash, &genaroData)
+		if nil == genaroData.CrossChainArr {
+			genaroData.CrossChainArr = map[string]types.CrossChain{crossChain.Hash:crossChain}
+		} else {
+			genaroData.CrossChainArr[crossChain.Hash] = crossChain
+		}
+	}
+	genaroData.CrossChain = types.CrossChain{}
+	b, _ := json.Marshal(genaroData)
+	self.code = nil
+	self.data.CodeHash = b[:]
+	self.dirtyCode = true
+	if self.onDirty != nil {
+		self.onDirty(self.Address())
+		self.onDirty = nil
+	}
+	return true
+}
+
+func (self *stateObject) CheckCrossChainHash( hash string) bool {
+	var genaroData types.GenaroData
+	if nil == self.data.CodeHash {
+		return false
+	} else {
+		json.Unmarshal(self.data.CodeHash, &genaroData)
+		if nil == genaroData.CrossChainArr {
+			return false
+		} else {
+			result := genaroData.CrossChainArr[hash]
+			if 0 == len(result.Hash) {
+				return false
+			}
+
+			return true
+		}
+	}
+
+	return false
+}
+
+
+func (self *stateObject) CrossChainTranaction(crossChain types.CrossChain) (common.Address,*big.Int) {
+	var genaroData types.GenaroData
+	if nil == self.data.CodeHash {
+		return common.Address{}, big.NewInt(0)
+	} else {
+		json.Unmarshal(self.data.CodeHash, &genaroData)
+		if nil == genaroData.CrossChainArr {
+			return common.Address{}, big.NewInt(0)
+		} else {
+			result := genaroData.CrossChainArr[crossChain.Hash]
+			if true == result.Type {
+				return common.Address{}, big.NewInt(0)
+			}
+			result.Type = true
+			genaroData.CrossChainArr[crossChain.Hash] = result
+			b, _ := json.Marshal(genaroData)
+			self.code = nil
+			self.data.CodeHash = b[:]
+			self.dirtyCode = true
+			if self.onDirty != nil {
+				self.onDirty(self.Address())
+				self.onDirty = nil
+			}
+			return result.Address,result.Amount.ToInt()
+		}
+	}
+	return common.Address{}, big.NewInt(0)
+}

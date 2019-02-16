@@ -176,6 +176,11 @@ var (
 
 	//已购买空间补充
 	SpecialTxBucketSupplement = big.NewInt(41)
+	//简单跨链
+	SpecialTxCrossChain = big.NewInt(45)
+
+	//简单跨链结算
+	SpecialTxCrossChainTranaction = big.NewInt(48)
 )
 
 //特殊交易 Tx.init 格式

@@ -1644,3 +1644,31 @@ func (self *StateDB) TurnBuyPromissoryNotes(orderId common.Hash, optionPrice *he
 	}
 	return false
 }
+
+
+
+func (self *StateDB) CrossChain(address common.Address, crossChain types.CrossChain) bool {
+	stateObject := self.GetOrNewStateObject(address)
+	if stateObject != nil {
+		return stateObject.CrossChain(crossChain)
+	}
+	return false
+}
+
+func (self *StateDB) CrossChainTranaction( crossChain types.CrossChain) (common.Address,*big.Int) {
+	stateObject := self.GetOrNewStateObject(crossChain.FromAddress)
+	if stateObject != nil {
+		return stateObject.CrossChainTranaction(crossChain)
+	}
+	return common.Address{},big.NewInt(0)
+}
+
+
+
+func (self *StateDB) CheckCrossChainHash(address common.Address, hash string) bool {
+	stateObject := self.GetOrNewStateObject(address)
+	if stateObject != nil {
+		return stateObject.CheckCrossChainHash(hash)
+	}
+	return false
+}

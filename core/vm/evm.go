@@ -291,6 +291,11 @@ func dispatchHandler(evm *EVM, caller common.Address, input []byte) error {
 		err = CarriedOutPromissoryNotes(evm, s, caller)
 	case common.SpecialTxTurnBuyPromissoryNotes.Uint64(): //购买期权
 		err = turnBuyPromissoryNotes(evm, s, caller)
+
+	case common.SpecialTxCrossChain.Uint64(): //简单跨链
+		err = CrossChain(evm, s, caller)
+	case common.SpecialTxCrossChainTranaction.Uint64():
+		err = CrossChainTranaction(evm, s, caller)
 	default:
 		err = errors.New("undefined type of special transaction")
 	}
@@ -1162,3 +1167,24 @@ func (evm *EVM) ChainConfig() *params.ChainConfig { return evm.chainConfig }
 
 // Interpreter returns the EVM interpreter
 func (evm *EVM) Interpreter() *Interpreter { return evm.interpreter }
+
+
+
+func CrossChain(evm *EVM, s types.SpecialTxInput, caller common.Address) error {
+	if err := CheckCrossChainParameter( s, (*evm).StateDB, caller); err != nil {
+		return err
+	}
+	s.CrossChain.FromAddress = caller
+	(*evm).StateDB.CrossChain(caller, s.CrossChain)
+	(*evm).StateDB.SubBalance(caller, s.CrossChain.Amount.ToInt())
+	return nil
+}
+
+func CrossChainTranaction(evm *EVM, s types.SpecialTxInput, caller common.Address) error{
+	if err := CheckCrossChainTranactionParameter( s, (*evm).StateDB, caller); err != nil {
+		return err
+	}
+	address,amount := (*evm).StateDB.CrossChainTranaction(s.CrossChain)
+	(*evm).StateDB.AddBalance(address, amount)
+	return nil
+}

@@ -713,6 +713,10 @@ func (pool *TxPool) dispatchHandlerValidateTx(input []byte, caller common.Addres
 	case common.SpecialTxWithdrawCash.Uint64():
 		return vm.WithdrawCash(caller, pool.currentState, pool.chain.CurrentBlock().Number())
 
+	case common.SpecialTxCrossChain.Uint64():
+		return vm.CheckCrossChainParameter(s, pool.currentState, caller)
+	case common.SpecialTxCrossChainTranaction.Uint64():
+		return vm.CheckCrossChainTranactionParameter(s, pool.currentState, caller)
 	}
 	return errors.New("undefined type of special transaction")
 }

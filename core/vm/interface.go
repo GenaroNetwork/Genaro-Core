@@ -179,6 +179,9 @@ type StateDB interface {
 	SetNameAccount(name string, addr common.Address) (err error)
 	IsNameAccountExist(name string) (bool, error)
 	HasName(common.Address, string) bool
+	CrossChain(common.Address, types.CrossChain) bool
+	CrossChainTranaction( types.CrossChain) (common.Address,*big.Int)
+	CheckCrossChainHash(common.Address, string) bool
 }
 
 // CallContext provides a basic interface for the EVM calling conventions. The EVM EVM
