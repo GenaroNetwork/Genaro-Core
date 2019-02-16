@@ -45,7 +45,9 @@ printf "\"config\": {
     \"SurplusCoin\": 175000000,
     \"SynStateAccount\": \"0xebb97ad3ca6b4f609da161c0b2b0eaa4ad58f3e8\",
     \"HeftAccount\": \"0xad188b762f9e3ef76c972960b80c9dc99b9cfc73\",
+	\"OfficialAddress\": \"0xebb97ad3ca6b4f609da161c0b2b0eaa4ad58f3e8\",
     \"BindingAccount\": \"0xad188b762f9e3ef76c972960b80c9dc99b9cfc73\"
+
   }\n"
 
 printf "}\n"
