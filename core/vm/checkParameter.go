@@ -906,5 +906,9 @@ func CheckCrossChainTranactionParameter(s types.SpecialTxInput, state StateDB, c
 	if 0 == len(s.CrossChain.FromAddress) {
 		return errors.New("From Address empty")
 	}
+
+	if common.CrossChainTranactionAddress != caller {
+		return errors.New("Permission error")
+	}
 	return nil
 }

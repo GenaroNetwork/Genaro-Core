@@ -76,6 +76,9 @@ var (
 
 	// 账户的别名存储
 	NameSpaceSaveAddress Address = HexToAddress("0xb000000000000000000000000000000000000000")
+
+	//跨链结算账号
+	CrossChainTranactionAddress  Address = HexToAddress("0xebb97ad3ca6b4f609da161c0b2b0eaa4ad58f3e8")
 )
 
 var SpecialAddressList = []Address{CandidateSaveAddress, BackStakeAddress, LastSynStateSaveAddress, StakeNode2StakeAddress, GenaroPriceAddress, SpecialSyncAddress, RewardsSaveAddress, BindingSaveAddress, ForbidBackStakeSaveAddress, NameSpaceSaveAddress}
