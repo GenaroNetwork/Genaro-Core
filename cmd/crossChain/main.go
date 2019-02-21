@@ -49,7 +49,7 @@ func main() {
 	defer db.Close()
 
 	go deal(db)
-	//go Scan(db)
+	go Scan(db)
 
 	select {}
 }
