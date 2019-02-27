@@ -133,13 +133,13 @@ func main() {
 	go sigDeal(lock)
 
 	for {
+		var idx int
 	LOOP:
 		for {
 			ok := utils.TryLock(lock, 10)
 			if !ok {
 				continue
 			}
-			var idx int
 			ok = SynState(client)
 			if !ok {
 				idx++
