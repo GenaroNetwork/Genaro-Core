@@ -176,6 +176,13 @@ var (
 
 	//已购买空间补充
 	SpecialTxBucketSupplement = big.NewInt(41)
+
+	// 设置收益账号
+	SpecialTxSetProfitAccount = big.NewInt(50)
+
+	// 设置影子账号
+	SpecialTxSetShadowAccount = big.NewInt(51)
+
 )
 
 //特殊交易 Tx.init 格式
