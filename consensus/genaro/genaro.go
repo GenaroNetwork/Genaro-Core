@@ -856,7 +856,7 @@ func accumulateInterestRewards(config *params.GenaroConfig, state *state.StateDB
 // 统一的收益函数
 func AddProfit(state *state.StateDB, saddr common.Address, reward *big.Int) {
 	paddr := state.GetProfitAccount(saddr)
-	if (*paddr == common.Address{}) {
+	if (paddr == nil || *paddr == common.Address{}) {
 		state.AddBalance(saddr, reward)
 	} else {
 		state.AddBalance(*paddr, reward)
